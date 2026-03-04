@@ -1,0 +1,15 @@
+import { Module } from '@nestjs/common';
+import { ProposalsService } from './proposal.service';
+import { ProposalsController } from './proposal.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import {Proposal,ProposalSchema} from './schemas/proposal.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Proposal.name, schema: ProposalSchema }]),
+  ],
+  controllers: [ProposalsController],
+  providers: [ProposalsService],
+  exports: [ProposalsService]
+})
+export class ProposalModule {}
