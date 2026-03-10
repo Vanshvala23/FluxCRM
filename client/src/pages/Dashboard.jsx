@@ -9,7 +9,10 @@ import {
   IndianRupee,
   ArrowUpRight,
   FileText,
-  FolderKanban
+  FolderKanban,
+  CheckCircle,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 
 import {
@@ -24,6 +27,8 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts';
 
 import { Calendar, momentLocalizer } from 'react-big-calendar';
@@ -99,9 +104,12 @@ export default function Dashboard() {
     proposalRevenue: 0,
     projects: 0,
     activeProjects: 0,
+    completedProjects: 0,
+    overdueProjects: 0,
   });
 
   const [leadStats, setLeadStats] = useState([]);
+  const [projectStats, setProjectStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState([]);
   const [greeting, setGreeting] = useState(getGreeting(user?.name));
@@ -161,6 +169,30 @@ export default function Dashboard() {
           ? proposals.data
           : proposals.data?.data || [];
 
+        const projectList = Array.isArray(projects.data)
+          ? projects.data
+          : projects.data?.data || [];
+
+        const projectsData = prStats.data || {};
+        
+        // Calculate project statistics
+        const activeProjects = projectList.filter(p => p.status === 'active').length;
+        const completedProjects = projectList.filter(p => p.status === 'completed').length;
+        const overdueProjects = projectList.filter(p => 
+          p.dueDate && new Date(p.dueDate) < new Date() && !['completed', 'cancelled'].includes(p.status)
+        ).length;
+
+        // Build project status distribution for chart
+        const statusCounts = {};
+        projectList.forEach(p => {
+          statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+        });
+        
+        const projectChartData = Object.entries(statusCounts).map(([status, count]) => ({
+          _id: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+          count: count,
+        }));
+
         setStats({
           contacts: contacts.data?.length || 0,
           leads: leadsList.length,
@@ -168,11 +200,14 @@ export default function Dashboard() {
           revenue,
           proposals: proposalList.length,
           proposalRevenue: pStats.data?.revenueWon || 0,
-          projects: projects.data?.length || 0,
-          activeProjects: prStats.data?.active || 0,
+          projects: projectList.length,
+          activeProjects: activeProjects,
+          completedProjects: completedProjects,
+          overdueProjects: overdueProjects,
         });
 
         setLeadStats(lStats.data || []);
+        setProjectStats(projectChartData);
 
         const ev = (activities.data || []).map((a) => ({
           id: a._id || Math.random(),
@@ -239,7 +274,7 @@ export default function Dashboard() {
       change: '+24%',
     },
     {
-      label: 'Proposals',
+      label: 'Total Proposals',
       value: stats.proposals,
       icon: FileText,
       color: 'bg-sky-50 text-sky-600',
@@ -252,20 +287,20 @@ export default function Dashboard() {
       color: 'bg-teal-50 text-teal-600',
       change: '+15%',
     },
-      {
-  label: 'Total Projects',
-  value: stats.projects,
-  icon: FolderKanban, // or FolderKanban if you import it
-  color: 'bg-indigo-50 text-indigo-600',
-  change: '+6%',
-},
-{
-  label: 'Active Projects',
-  value: stats.activeProjects,
-  icon: TrendingUp,
-  color: 'bg-emerald-50 text-emerald-600',
-  change: '+4%',
-},
+    {
+      label: 'Total Projects',
+      value: stats.projects,
+      icon: FolderKanban,
+      color: 'bg-indigo-50 text-indigo-600',
+      change: '+6%',
+    },
+    {
+      label: 'Active Projects',
+      value: stats.activeProjects,
+      icon: CheckCircle,
+      color: 'bg-emerald-50 text-emerald-600',
+      change: '+4%',
+    },
   ];
 
   const pieData = useMemo(
@@ -276,6 +311,16 @@ export default function Dashboard() {
         fill: CHART_COLORS[i % CHART_COLORS.length],
       })),
     [leadStats]
+  );
+
+  const projectPieData = useMemo(
+    () =>
+      (projectStats || []).map((s, i) => ({
+        name: s._id,
+        value: s.count,
+        fill: CHART_COLORS[i % CHART_COLORS.length],
+      })),
+    [projectStats]
   );
 
   return (
@@ -289,7 +334,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, change }) => (
           <div
             key={label}
@@ -303,7 +348,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}
               >
                 <Icon className="w-4 h-4" />
               </div>
@@ -321,9 +366,25 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Project Status Alert - Show if there are overdue projects */}
+      {stats.overdueProjects > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-red-900">Projects at Risk</h3>
+              <p className="text-sm text-red-700 mt-1">
+                {stats.overdueProjects} project{stats.overdueProjects !== 1 ? 's' : ''} {stats.overdueProjects !== 1 ? 'are' : 'is'} overdue. 
+                <Link to="/projects" className="font-semibold underline ml-1">View projects →</Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
+        {/* Lead Performance Bar chart */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900">
@@ -331,62 +392,156 @@ export default function Dashboard() {
             </h2>
             <Link
               to="/leads"
-              className="text-sm text-primary-600 hover:text-primary-700"
+              className="text-sm text-indigo-600 hover:text-indigo-700"
             >
               View all
             </Link>
           </div>
 
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={leadStats || []} barCategoryGap="30%">
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f0f0f0"
-                  vertical={false}
-                />
-                <XAxis dataKey="_id" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomBarTooltip />} />
-                <Bar dataKey="count">
-                  {(leadStats || []).map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={CHART_COLORS[i % CHART_COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {leadStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={leadStats || []} barCategoryGap="30%">
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#f0f0f0"
+                    vertical={false}
+                  />
+                  <XAxis dataKey="_id" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomBarTooltip />} />
+                  <Bar dataKey="count">
+                    {(leadStats || []).map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={CHART_COLORS[i % CHART_COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <p>No lead data available</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Pie chart */}
+        {/* Lead Distribution Pie chart */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
           <h2 className="font-semibold text-gray-900 mb-4">
             Lead Distribution
           </h2>
 
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={80}
-                  innerRadius={40}
-                  paddingAngle={3}
-                  stroke="none"
-                >
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomPieTooltip />} />
-                <Legend iconType="circle" iconSize={8} />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={80}
+                    innerRadius={40}
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                  <Legend iconType="circle" iconSize={8} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <p>No data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Project Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Project Status Bar chart */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900">
+              Project Status Overview
+            </h2>
+            <Link
+              to="/projects"
+              className="text-sm text-indigo-600 hover:text-indigo-700"
+            >
+              View all
+            </Link>
+          </div>
+
+          <div className="h-64">
+            {projectStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={projectStats} barCategoryGap="30%">
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#f0f0f0"
+                    vertical={false}
+                  />
+                  <XAxis dataKey="_id" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomBarTooltip />} />
+                  <Bar dataKey="count">
+                    {(projectStats || []).map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={CHART_COLORS[i % CHART_COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <p>No project data available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Project Distribution Pie chart */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+          <h2 className="font-semibold text-gray-900 mb-4">
+            Project Distribution
+          </h2>
+
+          <div className="h-64">
+            {projectPieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={projectPieData}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={80}
+                    innerRadius={40}
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {projectPieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                  <Legend iconType="circle" iconSize={8} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <p>No data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -417,20 +572,21 @@ export default function Dashboard() {
             Quick Actions
           </h2>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {[
               { label: 'Add Contact', to: '/contacts', icon: Users },
               { label: 'New Lead', to: '/leads', icon: TrendingUp },
               { label: 'Create Ticket', to: '/tickets', icon: Ticket },
               { label: 'New Proposal', to: '/proposals', icon: FileText },
+              { label: 'New Project', to: '/projects', icon: FolderKanban },
             ].map(({ label, to, icon: Icon }) => (
               <Link
                 key={label}
                 to={to}
-                className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 border border-gray-200 transition-all"
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium">{label}</span>
+                <Icon className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">{label}</span>
               </Link>
             ))}
           </div>

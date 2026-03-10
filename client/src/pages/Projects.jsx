@@ -31,6 +31,10 @@ const EMPTY_FORM = {
   startDate: '', dueDate: '',
   budget: 0, spent: 0, currency: 'INR',
   progress: 0, tags: '', notes: '',
+  billingType: 'fixed', // 'fixed' | 'hours' | 'task'
+  estimatedHours: 0,
+  totalRate: 0,
+  calculateProgressThroughTasks: false,
 };
 
 const CURRENCY_SYMBOLS = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
@@ -239,6 +243,10 @@ function ProjectModal({ project, contacts, users, onClose, onSaved }) {
       progress:    project.progress || 0,
       tags:        (project.tags || []).join(', '),
       notes:       project.notes || '',
+      billingType: project.billingType || 'fixed',
+      estimatedHours: project.estimatedHours || 0,
+      totalRate:   project.totalRate || 0,
+      calculateProgressThroughTasks: project.calculateProgressThroughTasks || false,
     };
   });
   const [saving, setSaving] = useState(false);
@@ -265,6 +273,8 @@ function ProjectModal({ project, contacts, users, onClose, onSaved }) {
         budget:  Number(form.budget),
         spent:   Number(form.spent),
         progress: Number(form.progress),
+        estimatedHours: Number(form.estimatedHours),
+        totalRate: Number(form.totalRate),
         members: form.members,
         client:  form.client  || undefined,
         manager: form.manager || undefined,
@@ -304,118 +314,180 @@ function ProjectModal({ project, contacts, users, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Name + Description */}
+          {/* Project Name + Project Type (Customer) */}
           <div className="space-y-3">
             <div>
-              <label className={labelCls}>Project Name *</label>
+              <label className={labelCls}>* Project Name</label>
               <input className={inputCls} placeholder="e.g. Website Redesign Q3"
                 value={form.name} onChange={e => set('name', e.target.value)} />
             </div>
             <div>
-              <label className={labelCls}>Description</label>
-              <textarea rows={2} className={`${inputCls} resize-none`} placeholder="Project overview..."
-                value={form.description} onChange={e => set('description', e.target.value)} />
+              <label className={labelCls}>* Member</label>
+              <div className="mt-1">
+                <SearchableSelect value={form.client} onChange={v => set('client', v)}
+                  options={contactOptions} placeholder="Select Members" />
+              </div>
             </div>
           </div>
 
-          {/* Status + Priority */}
+          {/* Progress Calculation + Status */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Status</label>
+              <label className={labelCls}>Calculate Progress Through Tasks</label>
+              <div className="mt-2 flex items-center">
+                <input type="checkbox" 
+                  checked={form.calculateProgressThroughTasks}
+                  onChange={e => set('calculateProgressThroughTasks', e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                <span className="text-sm text-gray-600 ml-2">Auto-calculate from tasks</span>
+              </div>
+              {form.calculateProgressThroughTasks && (
+                <p className="text-xs text-indigo-600 mt-2">Progress: {form.progress}%</p>
+              )}
+            </div>
+            <div>
+              <label className={labelCls}>* Status</label>
               <div className="mt-1">
-                <SearchableSelect value={form.status} onChange={v => set('status', v)} options={statusOptions} />
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'planning', label: 'Not Started' },
+                    { value: 'active', label: 'In Progress' },
+                    { value: 'on_hold', label: 'On Hold' },
+                    { value: 'cancelled', label: 'Cancelled' },
+                    { value: 'completed', label: 'Finished' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => set('status', opt.value)}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all border
+                        ${form.status === opt.value
+                          ? 'bg-indigo-100 border-indigo-400 text-indigo-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Billing Type + Estimated Hours + Total Rate */}
+          <div className="space-y-3">
+            <label className={labelCls}>* Billing Type</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: 'fixed', label: 'Fixed Rate' },
+                { value: 'hours', label: 'Project Hours' },
+                { value: 'task', label: 'Task Hours' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => set('billingType', opt.value)}
+                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all border
+                    ${form.billingType === opt.value
+                      ? 'bg-indigo-100 border-indigo-400 text-indigo-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Estimated Hours</label>
+                <input type="number" min="0" className={inputCls} placeholder="0"
+                  value={form.estimatedHours} onChange={e => set('estimatedHours', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Total Rate ({form.currency})</label>
+                <input type="number" min="0" className={inputCls} placeholder="0"
+                  value={form.totalRate} onChange={e => set('totalRate', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Project Manager + Priority */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Priority</label>
               <div className="mt-1">
-                <SearchableSelect value={form.priority} onChange={v => set('priority', v)} options={priorityOptions} />
+                <SearchableSelect value={form.priority} onChange={v => set('priority', v)} 
+                  options={priorityOptions} />
               </div>
-            </div>
-          </div>
-
-          {/* Client + Manager */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Client</label>
-              <div className="mt-1">
-                <SearchableSelect value={form.client} onChange={v => set('client', v)}
-                  options={contactOptions} placeholder="Select client…" nullable />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Project Manager</label>
-              <div className="mt-1">
-                <SearchableSelect value={form.manager} onChange={v => set('manager', v)}
-                  options={userOptions} placeholder="Select manager…" nullable />
-              </div>
-            </div>
-          </div>
-
-          {/* Members */}
-          <div>
-            <label className={labelCls}>Team Members</label>
-            <div className="mt-1">
-              <MultiSelect values={form.members} onChange={v => set('members', v)}
-                options={userOptions} placeholder="Add team members…" />
             </div>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Start Date</label>
+              <label className={labelCls}>* Start Date</label>
               <input type="date" className={inputCls} value={form.startDate} onChange={e => set('startDate', e.target.value)} />
             </div>
             <div>
-              <label className={labelCls}>Due Date</label>
+              <label className={labelCls}>Deadline</label>
               <input type="date" className={inputCls} value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
             </div>
           </div>
 
-          {/* Budget */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className={labelCls}>Currency</label>
-              <div className="mt-1">
-                <SearchableSelect value={form.currency} onChange={v => set('currency', v)} options={currencyOptions} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Budget ({sym})</label>
-              <input type="number" min="0" className={inputCls} placeholder="0"
-                value={form.budget} onChange={e => set('budget', e.target.value)} />
-            </div>
-            <div>
-              <label className={labelCls}>Spent ({sym})</label>
-              <input type="number" min="0" className={inputCls} placeholder="0"
-                value={form.spent} onChange={e => set('spent', e.target.value)} />
-            </div>
-          </div>
-
-          {/* Progress */}
+          {/* Tags */}
           <div>
-            <label className={labelCls}>Progress — {form.progress}%</label>
-            <div className="mt-2 space-y-2">
-              <input type="range" min="0" max="100" className="w-full accent-indigo-600"
-                value={form.progress} onChange={e => set('progress', Number(e.target.value))} />
-              <ProgressBar value={form.progress} />
-            </div>
+            <label className={labelCls}>* Tags</label>
+            <input className={inputCls} placeholder="e.g. design, frontend, mvp"
+              value={form.tags} onChange={e => set('tags', e.target.value)} />
           </div>
 
-          {/* Tags + Notes */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Tags (comma-separated)</label>
-              <input className={inputCls} placeholder="design, frontend, mvp"
-                value={form.tags} onChange={e => set('tags', e.target.value)} />
-            </div>
-            <div>
-              <label className={labelCls}>Notes</label>
-              <textarea rows={2} className={`${inputCls} resize-none`} placeholder="Internal notes..."
-                value={form.notes} onChange={e => set('notes', e.target.value)} />
-            </div>
+          {/* Description */}
+          <div>
+            <label className={labelCls}>Description</label>
+            <textarea rows={3} className={`${inputCls} resize-none`} placeholder="Project details and notes..."
+              value={form.description} onChange={e => set('description', e.target.value)} />
           </div>
+
+          {/* Budget Section (Collapsible) */}
+          <details className="border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+            <summary className="font-semibold text-gray-700 flex items-center gap-2">
+              <ChevronRight className="w-4 h-4 transition-transform" style={{ transform: 'rotate(0deg)' }} />
+              Advanced Billing & Budget
+            </summary>
+            <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className={labelCls}>Currency</label>
+                  <div className="mt-1">
+                    <SearchableSelect value={form.currency} onChange={v => set('currency', v)} options={currencyOptions} />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Budget ({CURRENCY_SYMBOLS[form.currency] || '₹'})</label>
+                  <input type="number" min="0" className={inputCls} placeholder="0"
+                    value={form.budget} onChange={e => set('budget', e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelCls}>Spent ({CURRENCY_SYMBOLS[form.currency] || '₹'})</label>
+                  <input type="number" min="0" className={inputCls} placeholder="0"
+                    value={form.spent} onChange={e => set('spent', e.target.value)} />
+                </div>
+              </div>
+              
+              {/* Progress slider - only show if not calculating from tasks */}
+              {!form.calculateProgressThroughTasks && (
+                <div>
+                  <label className={labelCls}>Manual Progress — {form.progress}%</label>
+                  <div className="mt-2 space-y-2">
+                    <input type="range" min="0" max="100" className="w-full accent-indigo-600"
+                      value={form.progress} onChange={e => set('progress', Number(e.target.value))} />
+                    <ProgressBar value={form.progress} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
         </div>
 
         {/* Footer */}
@@ -716,6 +788,27 @@ function ProjectCard({ project, onEdit, onDelete, onClick }) {
         <ProgressBar value={project.progress || 0} size="sm" />
       </div>
 
+      {/* Team Members (added to grid view) */}
+      {project.members?.length > 0 && (
+        <div className="flex items-center gap-1 mb-4 pt-3 border-t border-gray-100">
+          <div className="flex -space-x-1.5">
+            {project.members.slice(0, 4).map((m, i) => (
+              <div key={i} className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0 hover:z-10"
+                title={personName(m)}>
+                {personName(m).charAt(0).toUpperCase()}
+              </div>
+            ))}
+            {project.members.length > 4 && (
+              <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-500 hover:z-10"
+                title={`+${project.members.length - 4} more`}>
+                +{project.members.length - 4}
+              </div>
+            )}
+          </div>
+          <span className="text-xs text-gray-400 ml-1">{project.members.length} member{project.members.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
       {/* Footer meta */}
       <div className="flex items-center justify-between text-xs text-gray-400">
         <div className="flex items-center gap-3">
@@ -736,25 +829,6 @@ function ProjectCard({ project, onEdit, onDelete, onClick }) {
           </span>
         )}
       </div>
-
-      {/* Members avatars */}
-      {project.members?.length > 0 && (
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-100">
-          <div className="flex -space-x-1.5">
-            {project.members.slice(0, 4).map((m, i) => (
-              <div key={i} className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-xs font-bold text-indigo-700">
-                {personName(m).charAt(0).toUpperCase()}
-              </div>
-            ))}
-            {project.members.length > 4 && (
-              <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-500">
-                +{project.members.length - 4}
-              </div>
-            )}
-          </div>
-          <span className="text-xs text-gray-400 ml-1">{project.members.length} member{project.members.length !== 1 ? 's' : ''}</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -951,6 +1025,7 @@ export default function Projects() {
                   <tr className="border-b border-gray-100 bg-gray-50/60">
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project</th>
                     <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
+                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Manager</th>
                     <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                     <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Priority</th>
                     <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Progress</th>
@@ -969,6 +1044,7 @@ export default function Projects() {
                           <p className="text-xs text-gray-400 mt-0.5">#{p._id?.slice(-6).toUpperCase()}</p>
                         </td>
                         <td className="px-4 py-4 text-gray-700 font-medium">{contactName(p.client)}</td>
+                        <td className="px-4 py-4 text-gray-700 font-medium">{personName(p.manager)}</td>
                         <td className="px-4 py-4"><StatusBadge status={p.status} /></td>
                         <td className="px-4 py-4"><PriorityBadge priority={p.priority} /></td>
                         <td className="px-4 py-4 w-36">

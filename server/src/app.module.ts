@@ -10,6 +10,11 @@ import {MongooseModule} from "@nestjs/mongoose";
 import { ConfigModule } from '@nestjs/config';
 import { ProposalModule } from './proposal/proposal.module';
 import { ProjectsModule } from './projects/projects.module';
+import { TasksModule } from './tasks/tasks.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { CreditNoteModule } from './credit-note/credit-note.module';
+import { EstimationsModule } from './estimations/estimations.module';
+import { ItemsModule } from './items/items.module';
 
 @Module({
   imports: [
@@ -22,6 +27,11 @@ import { ProjectsModule } from './projects/projects.module';
     TicketsModule,
     ProposalModule,
     ProjectsModule,
+    TasksModule,
+    InvoicesModule,
+    CreditNoteModule,
+    EstimationsModule,
+    ItemsModule,
   ],
   controllers: [AppController], 
   providers: [AppService],

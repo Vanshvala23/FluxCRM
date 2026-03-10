@@ -10,6 +10,9 @@ import Leads from './pages/Leads';
 import Tickets from './pages/Tickets';
 import Proposals from './pages/Proposals';
 import Projects from './pages/Projects';
+import Tasks from './pages/Tasks';
+import Items from './pages/Items';
+import Invoices from './pages/Invoices';
 
 export default function App() {
   return (
@@ -25,6 +28,9 @@ export default function App() {
           <Route path="/tickets" element={<ProtectedRoute><Layout><Tickets /></Layout></ProtectedRoute>} />
           <Route path="/proposals" element={<ProtectedRoute><Layout><Proposals /></Layout></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute><Layout><Projects /></Layout></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute><Layout><Tasks /></Layout></ProtectedRoute>} />
+          <Route path="/items" element={<ProtectedRoute><Layout><Items/></Layout></ProtectedRoute>}/>
+          <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
