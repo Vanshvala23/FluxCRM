@@ -34,7 +34,9 @@ export class ProposalsService {
         dto.itemLines as ItemLineDto[],
       );
       // Map ItemsService shape → proposal line shape
+      // FIX: include `name` field required by the Proposal subdocument schema
       return resolved.map((r) => ({
+        name:         r.name ?? r.description,
         description:  r.description,
         quantity:     r.quantity,
         unitPrice:    r.unitPrice,
@@ -45,10 +47,12 @@ export class ProposalsService {
     }
 
     // Raw items — normalise to the same shape
+    // FIX: include `name` field required by the Proposal subdocument schema
     return (dto.items || []).map((item: any) => {
       const base   = item.quantity * item.unitPrice;
       const amount = Math.round(base * 100) / 100;
       return {
+        name:        item.name ?? item.description,
         description: item.description ?? item.name,
         quantity:    item.quantity,
         unitPrice:   item.unitPrice,

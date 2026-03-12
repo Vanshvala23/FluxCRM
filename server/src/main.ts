@@ -12,7 +12,7 @@ async function bootstrap() {
   // lowest possible level — before ANY NestJS middleware, guards, or interceptors.
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.use((req: any, res: any, next: any) => {
-    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000','http://localhost:5174'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
@@ -31,7 +31,7 @@ async function bootstrap() {
 
   // Keep enableCors as well (belt-and-suspenders)
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:3000','http://localhost:5174'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

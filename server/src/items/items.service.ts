@@ -129,6 +129,7 @@ export class ItemsService {
    * turn { itemId, quantity, overrides } → { description, unitPrice, tax, discount, amount }
    */
   async resolveLines(lines: ItemLineDto[]): Promise<{
+    name: string;
     itemRef:      string;
     description:  string;
     quantity:     number;
@@ -155,6 +156,7 @@ export class ItemsService {
         const amount      = Math.round((afterDisc + taxAmt) * 100) / 100;
 
         return {
+          name:item.name,
           itemRef:     String(item._id),
           description,
           quantity:    qty,
