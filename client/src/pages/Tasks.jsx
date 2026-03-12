@@ -38,6 +38,38 @@ const fmtDate = (d) =>
 const isOverdue = (dueDate, status) =>
   dueDate && !['completed', 'cancelled'].includes(status) && new Date(dueDate) < new Date();
 
+/**
+ * Unwrap any common API response shapes into { list, total }
+ * Handles: [], { data: [] }, { data: [], total }, { data: { data: [], total } },
+ *          { tasks: [] }, { results: [] }
+ */
+function unwrapTasks(raw) {
+  if (!raw) return { list: [], total: 0 };
+
+  // Plain array
+  if (Array.isArray(raw)) return { list: raw, total: raw.length };
+
+  // { tasks: [...] }
+  if (Array.isArray(raw.tasks))   return { list: raw.tasks,   total: raw.total ?? raw.tasks.length };
+
+  // { results: [...] }
+  if (Array.isArray(raw.results)) return { list: raw.results, total: raw.total ?? raw.results.length };
+
+  // { data: [...] }
+  if (Array.isArray(raw.data))    return { list: raw.data,    total: raw.total ?? raw.data.length };
+
+  // { data: { data: [...], total } }
+  if (raw.data && Array.isArray(raw.data.data))
+    return { list: raw.data.data, total: raw.data.total ?? raw.data.data.length };
+
+  // { data: { tasks: [...] } }
+  if (raw.data && Array.isArray(raw.data.tasks))
+    return { list: raw.data.tasks, total: raw.data.total ?? raw.data.tasks.length };
+
+  console.warn('[Tasks] Unrecognised API response shape:', raw);
+  return { list: [], total: 0 };
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
@@ -671,6 +703,7 @@ function TaskCard({ task, onEdit, onDelete, onClick }) {
 export default function Tasks() {
   const [tasks, setTasks]               = useState([]);
   const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState('');
   const [search, setSearch]             = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
@@ -680,51 +713,31 @@ export default function Tasks() {
   const [total, setTotal]               = useState(0);
   const LIMIT = 20;
 
-  const [modal, setModal]             = useState(null);
+  const [modal, setModal]               = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [drawerTask, setDrawerTask]   = useState(null);
+  const [drawerTask, setDrawerTask]     = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const params = { page, limit: LIMIT };
       if (filterStatus)   params.status   = filterStatus;
       if (filterPriority) params.priority = filterPriority;
       if (search)         params.search   = search;
 
-      console.log('Fetching tasks with params:', params);
-
       const [tRes, sRes] = await Promise.all([
         api.get('/tasks', { params }),
         api.get('/tasks/stats/overview').catch(() => ({ data: null })),
       ]);
 
-      console.log('Raw tasks response:', tRes.data);
-
-      const raw = tRes.data;
-      // Handle: { data: [...], total } OR [...] directly OR { data: { data: [...], total } }
-      let taskList = [];
-      let taskTotal = 0;
-
-      if (Array.isArray(raw)) {
-        taskList  = raw;
-        taskTotal = raw.length;
-      } else if (Array.isArray(raw?.data)) {
-        taskList  = raw.data;
-        taskTotal = raw.total ?? raw.data.length;
-      } else if (Array.isArray(raw?.data?.data)) {
-        taskList  = raw.data.data;
-        taskTotal = raw.data.total ?? raw.data.data.length;
-      } else {
-        console.warn('Unexpected tasks API shape:', raw);
-      }
-
-      console.log('Tasks loaded:', taskList.length, 'of', taskTotal);
-      setTasks(taskList);
-      setTotal(taskTotal);
+      const { list, total: t } = unwrapTasks(tRes.data);
+      setTasks(list);
+      setTotal(t);
       setStats(sRes.data);
     } catch (e) {
-      console.error('Failed to load tasks:', e);
+      console.error('[Tasks] Load failed:', e);
+      setError(e?.response?.data?.message || e?.message || 'Failed to load tasks');
     } finally {
       setLoading(false);
     }
@@ -732,16 +745,16 @@ export default function Tasks() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleSearch = (e) => {
-    if (e.key === 'Enter') { setPage(1); load(); }
-  };
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [filterStatus, filterPriority]);
 
   const refreshDrawer = async () => {
     await load();
     if (drawerTask) {
       try {
         const res = await api.get(`/tasks/${drawerTask._id}`);
-        setDrawerTask(res.data);
+        // unwrap single-task response (may be wrapped in { data: ... })
+        setDrawerTask(res.data?.data ?? res.data);
       } catch {}
     }
   };
@@ -807,7 +820,9 @@ export default function Tasks() {
             <input
               className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
               placeholder="Search tasks… (press Enter)"
-              value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearch}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { setPage(1); } }}
             />
           </div>
 
@@ -844,6 +859,15 @@ export default function Tasks() {
           </button>
         </div>
 
+        {/* Error banner */}
+        {error && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+            <button onClick={load} className="ml-auto text-xs font-semibold underline hover:no-underline">Retry</button>
+          </div>
+        )}
+
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -853,7 +877,11 @@ export default function Tasks() {
           <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-white border border-gray-200 rounded-2xl">
             <CheckSquare className="w-12 h-12 mb-3 text-gray-200" />
             <p className="font-medium text-gray-500">No tasks found</p>
-            <p className="text-sm mt-1">Create your first task to get started</p>
+            <p className="text-sm mt-1">
+              {filterStatus || filterPriority || search
+                ? 'Try adjusting your filters'
+                : 'Create your first task to get started'}
+            </p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
