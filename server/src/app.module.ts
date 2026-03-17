@@ -15,6 +15,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { CreditNoteModule } from './credit-note/credit-note.module';
 import { EstimationsModule } from './estimations/estimations.module';
 import { ItemsModule } from './items/items.module';
+import { BulkPdfModule } from './bulk-pdf/bulk-pdf.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ItemsModule } from './items/items.module';
     CreditNoteModule,
     EstimationsModule,
     ItemsModule,
+    BulkPdfModule,
   ],
   controllers: [AppController], 
   providers: [AppService],

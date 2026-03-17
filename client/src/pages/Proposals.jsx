@@ -4,7 +4,7 @@ import {
   Plus, Pencil, Trash2, X, Loader2, Search, FileSignature,
   DollarSign, Calendar, Check, AlertCircle, Printer,
   ArrowLeft, Package, Wrench, Eye, Send, CheckCircle2,
-  Clock, XCircle, ThumbsUp, ThumbsDown, Percent
+  Clock, XCircle, ThumbsUp, ThumbsDown, Percent,IndianRupee
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -25,10 +25,10 @@ function printProposal(p) {
     <tr>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${item.description||item.name||'—'}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${item.quantity}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right">$${(item.unitPrice||0).toLocaleString()}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right">₹${(item.unitPrice||0).toLocaleString()}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${item.discount||0}%</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${item.tax||0}%</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">$${(item.amount||0).toLocaleString()}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600">₹${(item.amount||0).toLocaleString()}</td>
     </tr>`).join('');
   win.document.write(`
     <html><head><title>${p.title}</title>
@@ -56,10 +56,10 @@ function printProposal(p) {
     </div>
     ${rows?`<table><thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Disc</th><th style="text-align:right">Tax</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>`:''}
     <div class="totals"><table>
-      ${p.subtotal?`<tr><td>Subtotal</td><td style="text-align:right">$${(p.subtotal||0).toLocaleString()}</td></tr>`:''}
-      ${p.discountPercent>0?`<tr><td>Discount (${p.discountPercent}%)</td><td style="text-align:right">-$${(p.totalDiscount||0).toLocaleString()}</td></tr>`:''}
-      ${p.taxPercent>0?`<tr><td>Tax (${p.taxPercent}%)</td><td style="text-align:right">+$${(p.totalTax||0).toLocaleString()}</td></tr>`:''}
-      <tr class="total-row"><td>Total</td><td style="text-align:right">$${(p.amount||0).toLocaleString()}</td></tr>
+      ${p.subtotal?`<tr><td>Subtotal</td><td style="text-align:right">₹${(p.subtotal||0).toLocaleString()}</td></tr>`:''}
+      ${p.discountPercent>0?`<tr><td>Discount (${p.discountPercent}%)</td><td style="text-align:right">-₹${(p.totalDiscount||0).toLocaleString()}</td></tr>`:''}
+      ${p.taxPercent>0?`<tr><td>Tax (${p.taxPercent}%)</td><td style="text-align:right">+₹${(p.totalTax||0).toLocaleString()}</td></tr>`:''}
+      <tr class="total-row"><td>Total</td><td style="text-align:right">₹${(p.amount||0).toLocaleString()}</td></tr>
     </table></div>
     ${p.notes?`<div style="margin-top:24px;padding:16px;background:#f9fafb;border-radius:6px"><p style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600">Notes</p><p style="margin-top:6px;font-size:13px">${p.notes}</p></div>`:''}
     ${p.terms?`<div style="margin-top:12px;padding:16px;background:#f9fafb;border-radius:6px"><p style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600">Terms</p><p style="margin-top:6px;font-size:13px">${p.terms}</p></div>`:''}
@@ -142,7 +142,7 @@ function ItemPicker({ lines, onChange }) {
                   </div>
                   <span className="truncate font-medium text-gray-700">{ci.name}</span>
                 </div>
-                <span className="text-xs font-semibold text-green-600 flex-shrink-0 ml-2">${ci.unitPrice?.toLocaleString()}</span>
+                <span className="text-xs font-semibold text-green-600 flex-shrink-0 ml-2">₹{ci.unitPrice?.toLocaleString()}</span>
               </button>
             ))}
             {catalogue.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No items found</p>}
@@ -175,14 +175,14 @@ function ItemPicker({ lines, onChange }) {
                   <td className="px-2 py-1.5"><input className="input text-xs py-1 w-full text-right" type="number" min="0" step="0.01" value={line.unitPrice} onChange={e => updateLine(idx, 'unitPrice', Number(e.target.value))} /></td>
                   <td className="px-2 py-1.5"><input className="input text-xs py-1 w-full text-center" type="number" min="0" max="100" value={line.tax} onChange={e => updateLine(idx, 'tax', Number(e.target.value))} /></td>
                   <td className="px-2 py-1.5"><input className="input text-xs py-1 w-full text-center" type="number" min="0" max="100" value={line.discount} onChange={e => updateLine(idx, 'discount', Number(e.target.value))} /></td>
-                  <td className="px-3 py-1.5 text-right font-semibold text-gray-700">${computeAmount(line).toLocaleString()}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold text-gray-700">₹{computeAmount(line).toLocaleString()}</td>
                   <td className="pr-2 py-1.5"><button type="button" onClick={() => removeLine(idx)} className="p-1 text-gray-300 hover:text-red-400 rounded"><X className="w-3.5 h-3.5" /></button></td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex justify-end">
-            <p className="text-xs font-bold text-gray-700">Lines Total: <span className="text-green-600">${lineTotal.toFixed(2)}</span></p>
+            <p className="text-xs font-bold text-gray-700">Lines Total: <span className="text-green-600">₹{lineTotal.toFixed(2)}</span></p>
           </div>
         </div>
       )}
@@ -369,7 +369,7 @@ function ProposalModal({ proposal, onClose, onSaved }) {
                   {/* Grand total preview */}
                   <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded px-4 py-2.5">
                     <span className="text-xs text-green-600 font-semibold uppercase">Grand Total Preview</span>
-                    <span className="text-lg font-bold text-green-700">${grandTotal.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-green-700">₹{grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -442,7 +442,7 @@ function ProposalDetail({ proposal, onClose, onEdit, onDelete, onRefresh }) {
               <span className={`badge capitalize mt-1 inline-block ${statusColors[proposal.status]}`}>{proposal.status}</span>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-xl font-bold text-gray-900">${(proposal.amount || 0).toLocaleString()}</p>
+              <p className="text-xl font-bold text-gray-900">₹{(proposal.amount || 0).toLocaleString()}</p>
               <p className="text-xs text-gray-400">{proposal.currency || 'INR'}</p>
             </div>
           </div>
@@ -499,16 +499,16 @@ function ProposalDetail({ proposal, onClose, onEdit, onDelete, onRefresh }) {
                   <div key={i} className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 last:border-0 bg-white">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-700 truncate">{item.description || item.name}</p>
-                      <p className="text-xs text-gray-400">Qty {item.quantity} × ${item.unitPrice?.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">Qty {item.quantity} × ₹{item.unitPrice?.toLocaleString()}</p>
                     </div>
-                    <p className="text-sm font-bold text-gray-800 flex-shrink-0 ml-3">${(item.amount || (item.quantity * item.unitPrice) || 0).toLocaleString()}</p>
+                    <p className="text-sm font-bold text-gray-800 flex-shrink-0 ml-3">₹{(item.amount || (item.quantity * item.unitPrice) || 0).toLocaleString()}</p>
                   </div>
                 ))}
                 <div className="bg-gray-50 border-t border-gray-200 px-3 py-2">
-                  {proposal.subtotal > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>${proposal.subtotal.toLocaleString()}</span></div>}
-                  {proposal.totalDiscount > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Discount ({proposal.discountPercent}%)</span><span>-${proposal.totalDiscount.toLocaleString()}</span></div>}
-                  {proposal.totalTax > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Tax ({proposal.taxPercent}%)</span><span>+${proposal.totalTax.toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm font-bold text-gray-800 border-t border-gray-200 pt-1 mt-1"><span>Total</span><span>${(proposal.amount||0).toLocaleString()}</span></div>
+                  {proposal.subtotal > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>₹{proposal.subtotal.toLocaleString()}</span></div>}
+                  {proposal.totalDiscount > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Discount ({proposal.discountPercent}%)</span><span>-₹{proposal.totalDiscount.toLocaleString()}</span></div>}
+                  {proposal.totalTax > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Tax ({proposal.taxPercent}%)</span><span>+₹{proposal.totalTax.toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-sm font-bold text-gray-800 border-t border-gray-200 pt-1 mt-1"><span>Total</span><span>₹{(proposal.amount||0).toLocaleString()}</span></div>
                 </div>
               </div>
             </div>
@@ -657,7 +657,7 @@ export default function Proposals() {
               )}
               <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 mt-2">
                 <div className="flex items-center gap-1 text-green-600 font-bold text-sm">
-                  <DollarSign className="w-3.5 h-3.5" />{(p.amount || 0).toLocaleString()}
+                  <IndianRupee className="w-3.5 h-3.5" />{(p.amount || 0).toLocaleString()}
                 </div>
                 <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
                   <button onClick={() => openEdit(p)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-primary-600 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>

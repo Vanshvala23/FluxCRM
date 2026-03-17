@@ -6,7 +6,7 @@ import {
   Calendar, ChevronRight, ArrowLeft, UserPlus, FileSignature,
   Activity, Bell, Paperclip, CheckSquare,
   Clock, Upload, Check, AlertCircle, Download, Eye,
-  MessageSquare, ChevronDown
+  MessageSquare, ChevronDown, Search, CheckCircle2, SkipForward
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -27,6 +27,20 @@ const proposalStatusColors = {
 const emptyForm = {
   title: '', contactName: '', contactEmail: '', company: '',
   source: '', status: 'new', value: '', notes: ''
+};
+
+// ── Import UI constants ───────────────────────────────────────────────────────
+const ROW_ICON = {
+  will_import: <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />,
+  imported:    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />,
+  duplicate:   <SkipForward  className="w-3.5 h-3.5 text-amber-500" />,
+  invalid:     <AlertCircle  className="w-3.5 h-3.5 text-red-500" />,
+};
+const ROW_LABEL_STYLE = {
+  will_import: 'text-blue-600 bg-blue-50',
+  imported:    'text-emerald-600 bg-emerald-50',
+  duplicate:   'text-amber-600 bg-amber-50',
+  invalid:     'text-red-600 bg-red-50',
 };
 
 // ── Print ─────────────────────────────────────────────────────────────────────
@@ -51,7 +65,7 @@ function printLead(lead) {
       <div class="field"><label>Email</label><p>${lead.contactEmail||'—'}</p></div>
       <div class="field"><label>Company</label><p>${lead.company||'—'}</p></div>
       <div class="field"><label>Source</label><p>${lead.source||'—'}</p></div>
-      <div class="field"><label>Deal Value</label><p>$${(lead.value||0).toLocaleString()}</p></div>
+      <div class="field"><label>Deal Value</label><p>₹${(lead.value||0).toLocaleString()}</p></div>
       <div class="field"><label>Created</label><p>${new Date(lead.createdAt).toLocaleDateString()}</p></div>
     </div>
     ${lead.notes?`<div class="notes"><label style="font-size:11px;color:#6b7280;text-transform:uppercase">Notes</label><p style="margin-top:6px">${lead.notes}</p></div>`:''}
@@ -398,7 +412,7 @@ function AttachmentsTab({ leadId }) {
   );
 }
 
-// ── Proposals tab — reads real API ────────────────────────────────────────────
+// ── Proposals tab ─────────────────────────────────────────────────────────────
 function ProposalsTab({ lead }) {
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -423,10 +437,7 @@ function ProposalsTab({ lead }) {
         .footer{margin-top:36px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px}
       </style></head><body>
       <h1>${p.subject}</h1>
-      <div class="meta">
-        Valid until: <strong>${p.validUntil || 'N/A'}</strong> &nbsp;·&nbsp;
-        Status: <span class="badge">${p.status}</span>
-      </div>
+      <div class="meta">Valid until: <strong>${p.validUntil || 'N/A'}</strong> &nbsp;·&nbsp; Status: <span class="badge">${p.status}</span></div>
       ${p.body ? `<div class="body">${p.body}</div>` : ''}
       <div class="footer">Printed from FluxCRM — ${new Date().toLocaleString()}</div>
       </body></html>`);
@@ -435,22 +446,17 @@ function ProposalsTab({ lead }) {
 
   return (
     <div className="p-4 space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500 font-medium">
           {loading ? 'Loading...' : `${proposals.length} proposal${proposals.length !== 1 ? 's' : ''} linked`}
         </p>
         <span className="text-xs text-gray-400 italic">Manage in Proposals page</span>
       </div>
-
-      {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-10 text-gray-400">
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading proposals...
         </div>
       )}
-
-      {/* Empty */}
       {!loading && proposals.length === 0 && (
         <div className="text-center py-10 text-gray-400">
           <FileSignature className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -458,9 +464,7 @@ function ProposalsTab({ lead }) {
           <p className="text-xs mt-1">Create one from the Proposals page</p>
         </div>
       )}
-
-      {/* List */}
-      {!loading && proposals.length > 0 && proposals.map(p => (
+      {!loading && proposals.map(p => (
         <div key={p._id} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded hover:bg-gray-50 transition-colors">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 bg-orange-50 rounded flex items-center justify-center flex-shrink-0">
@@ -469,40 +473,22 @@ function ProposalsTab({ lead }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{p.subject}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                {p.validUntil && (
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> Valid until {p.validUntil}
-                  </span>
-                )}
-                {p.createdAt && (
-                  <span className="text-xs text-gray-400">
-                    · Created {new Date(p.createdAt).toLocaleDateString()}
-                  </span>
-                )}
+                {p.validUntil && <span className="text-xs text-gray-400 flex items-center gap-1"><Calendar className="w-3 h-3" /> Valid until {p.validUntil}</span>}
+                {p.createdAt  && <span className="text-xs text-gray-400">· Created {new Date(p.createdAt).toLocaleDateString()}</span>}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-            <span className={`badge capitalize ${proposalStatusColors[p.status] || 'bg-gray-100 text-gray-600'}`}>
-              {p.status}
-            </span>
-            <button
-              title="Print"
-              onClick={() => printProposal(p)}
-              className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
-            >
+            <span className={`badge capitalize ${proposalStatusColors[p.status] || 'bg-gray-100 text-gray-600'}`}>{p.status}</span>
+            <button title="Print" onClick={() => printProposal(p)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors">
               <Printer className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       ))}
-
-      {/* Info banner */}
       <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded">
         <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-600">
-          To create or edit proposals, go to the <strong>Proposals</strong> page and link them to this lead.
-        </p>
+        <p className="text-xs text-blue-600">To create or edit proposals, go to the <strong>Proposals</strong> page and link them to this lead.</p>
       </div>
     </div>
   );
@@ -541,18 +527,8 @@ function LeadDetail({ lead, onClose, onEdit, onDelete, onConverted }) {
     } finally { setStatusUpdating(false); }
   };
 
-  const tabs = [
-    { id: 'overview',     label: 'Overview',    icon: Eye },
-    { id: 'activities',   label: 'Activities',  icon: Activity,     count: JSON.parse(localStorage.getItem(`flux_activities_${lead._id}`) || '[]').length },
-    { id: 'tasks',        label: 'Tasks',        icon: CheckSquare,  count: JSON.parse(localStorage.getItem(`flux_tasks_${lead._id}`) || '[]').length },
-    { id: 'reminders',    label: 'Reminders',   icon: Bell,         count: JSON.parse(localStorage.getItem(`flux_reminders_${lead._id}`) || '[]').filter(r=>!r.done).length },
-    { id: 'proposals',    label: 'Proposals',   icon: FileSignature },
-    { id: 'attachments',  label: 'Attachments', icon: Paperclip,    count: JSON.parse(localStorage.getItem(`flux_files_${lead._id}`) || '[]').length },
-    { id: 'notes',        label: 'Notes',       icon: MessageSquare },
-  ];
-
-  // lucide Eye import fix — use a local alias
-  function Eye(props) {
+  // local Eye icon to avoid import collision
+  function EyeIcon(props) {
     return (
       <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
         fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -560,6 +536,16 @@ function LeadDetail({ lead, onClose, onEdit, onDelete, onConverted }) {
       </svg>
     );
   }
+
+  const tabs = [
+    { id: 'overview',     label: 'Overview',    icon: EyeIcon },
+    { id: 'activities',   label: 'Activities',  icon: Activity,     count: JSON.parse(localStorage.getItem(`flux_activities_${lead._id}`) || '[]').length },
+    { id: 'tasks',        label: 'Tasks',        icon: CheckSquare,  count: JSON.parse(localStorage.getItem(`flux_tasks_${lead._id}`) || '[]').length },
+    { id: 'reminders',    label: 'Reminders',   icon: Bell,         count: JSON.parse(localStorage.getItem(`flux_reminders_${lead._id}`) || '[]').filter(r=>!r.done).length },
+    { id: 'proposals',    label: 'Proposals',   icon: FileSignature },
+    { id: 'attachments',  label: 'Attachments', icon: Paperclip,    count: JSON.parse(localStorage.getItem(`flux_files_${lead._id}`) || '[]').length },
+    { id: 'notes',        label: 'Notes',       icon: MessageSquare },
+  ];
 
   return (
     <>
@@ -706,12 +692,177 @@ function LeadDetail({ lead, onClose, onEdit, onDelete, onConverted }) {
   );
 }
 
+// ── Import Modal ──────────────────────────────────────────────────────────────
+function ImportModal({ onClose, onImported }) {
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting]   = useState(false);
+  const [simulating, setSimulating] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver]     = useState(false);
+  const fileRef = useRef(null);
+
+  const pickFile = (f) => {
+    if (!f) return;
+    if (!f.name.endsWith('.csv')) { alert('Please select a .csv file'); return; }
+    setImportFile(f); setImportResult(null);
+  };
+
+  const downloadSample = async () => {
+    const res = await api.get('/leads/import/sample', { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a'); a.href = url; a.download = 'leads_sample.csv'; a.click();
+  };
+
+  const runImport = async (simulate) => {
+    if (!importFile) return;
+    simulate ? setSimulating(true) : setImporting(true);
+    try {
+      const fd = new FormData(); fd.append('file', importFile);
+      const res = await api.post(`/leads/import?simulate=${simulate}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setImportResult(res.data);
+      if (!simulate) onImported();
+    } finally { setSimulating(false); setImporting(false); }
+  };
+
+  const statBubble = (label, val, color) => (
+    <div className={`flex flex-col items-center px-4 py-2.5 rounded-xl ${color}`}>
+      <span className="text-xl font-bold leading-none">{val}</span>
+      <span className="text-xs mt-0.5 opacity-70 font-medium">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 flex flex-col gap-5">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-primary-50 rounded-lg">
+              <Upload className="w-4 h-4 text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Import Leads</h2>
+              <p className="text-xs text-gray-400">Upload a CSV file to import leads in bulk</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Sample download */}
+        <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <FileText className="w-4 h-4 text-gray-400" />
+            Need the correct format?
+          </div>
+          <button onClick={downloadSample} className="flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Download sample CSV
+          </button>
+        </div>
+
+        {/* Drop zone */}
+        <div
+          className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
+            ${dragOver   ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
+            ${importFile ? 'border-emerald-300 bg-emerald-50' : ''}`}
+          onClick={() => fileRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => { e.preventDefault(); setDragOver(false); pickFile(e.dataTransfer.files[0]); }}
+        >
+          <input ref={fileRef} type="file" accept=".csv" className="hidden"
+            onChange={e => pickFile(e.target.files?.[0] ?? null)} />
+          {importFile ? (
+            <div className="flex flex-col items-center gap-1.5">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              <p className="font-medium text-emerald-700 text-sm">{importFile.name}</p>
+              <p className="text-xs text-emerald-500">{(importFile.size / 1024).toFixed(1)} KB · Click to change</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 text-gray-400">
+              <Upload className="w-8 h-8 opacity-40" />
+              <p className="text-sm font-medium">Drop your CSV here, or click to browse</p>
+              <p className="text-xs">Supports UTF-8 encoded .csv files only</p>
+            </div>
+          )}
+        </div>
+
+        {/* Fields hint */}
+        <p className="text-xs text-gray-400 -mt-2">
+          Required columns: <span className="font-mono text-gray-600">title, contactName</span>
+          {' '}— optional: contactEmail, company, value, status, source, notes
+        </p>
+
+        {/* Result */}
+        {importResult && (
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100">
+              {importResult.simulate
+                ? <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">DRY RUN</span>
+                : <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">IMPORTED</span>}
+              <span className="text-xs text-gray-500">{importResult.totalRows} rows processed</span>
+            </div>
+            <div className="flex gap-2 p-3">
+              {statBubble('Imported', importResult.imported, 'bg-emerald-50 text-emerald-700')}
+              {statBubble('Skipped',  importResult.skipped,  'bg-amber-50 text-amber-700')}
+              {statBubble('Failed',   importResult.failed,   'bg-red-50 text-red-700')}
+            </div>
+            {importResult.rows.length > 0 && (
+              <div className="border-t border-gray-100 max-h-44 overflow-y-auto divide-y divide-gray-50">
+                {importResult.rows.map((row) => (
+                  <div key={row.row} className="flex items-center gap-2.5 px-4 py-2 text-xs">
+                    <span className="text-gray-400 font-mono w-8 shrink-0">#{row.row}</span>
+                    {ROW_ICON[row.status]}
+                    <span className="text-gray-700 font-medium flex-1 truncate">{row.title}</span>
+                    <span className={`px-1.5 py-0.5 rounded font-medium capitalize shrink-0 ${ROW_LABEL_STYLE[row.status]}`}>
+                      {row.status.replace('_', ' ')}
+                    </span>
+                    {row.reason && <span className="text-gray-400 truncate max-w-[140px]">{row.reason}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn-secondary flex-1 text-sm">Close</button>
+          <button
+            type="button"
+            disabled={!importFile || simulating || importing}
+            onClick={() => runImport(true)}
+            className="flex-1 text-sm flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700 disabled:opacity-40 transition-colors"
+          >
+            {simulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Simulate
+          </button>
+          <button
+            type="button"
+            disabled={!importFile || importing || simulating}
+            onClick={() => runImport(false)}
+            className="btn-primary flex-1 text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</> : <><Upload className="w-4 h-4" /> Import</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Leads() {
   const [leads, setLeads]               = useState([]);
   const [filter, setFilter]             = useState('');
   const [loading, setLoading]           = useState(true);
   const [showModal, setShowModal]       = useState(false);
+  const [showImport, setShowImport]     = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [editing, setEditing]           = useState(null);
   const [form, setForm]                 = useState(emptyForm);
@@ -758,7 +909,14 @@ export default function Leads() {
           <h1 className="page-title">Leads</h1>
           <p className="text-gray-400 text-xs mt-0.5">{leads.length} total leads</p>
         </div>
-        <button onClick={openNew} className="btn-primary"><Plus className="w-4 h-4" /> Add Lead</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-2 text-sm">
+            <Upload className="w-4 h-4" /> Import
+          </button>
+          <button onClick={openNew} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Lead
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1.5 flex-wrap">
@@ -813,6 +971,10 @@ export default function Leads() {
       {selectedLead && (
         <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)}
           onEdit={openEdit} onDelete={handleDelete} onConverted={fetchLeads} />
+      )}
+
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onImported={fetchLeads} />
       )}
 
       {showModal && (
