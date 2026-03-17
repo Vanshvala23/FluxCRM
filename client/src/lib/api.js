@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://flux-abigj7omh-vanshvala23s-projects.vercel.app/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://flux-crm-six.vercel.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
