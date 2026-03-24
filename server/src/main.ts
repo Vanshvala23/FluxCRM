@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -41,10 +42,20 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('docs', app, document); // ✅ will be accessible at /api/docs
+  // ✅ Load Swagger UI assets from CDN — fixes 404 on static files
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true, // keeps Bearer token across page refreshes
+    },
+    customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
+    customJs: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js',
+    ],
+  });
 
   await app.listen(process.env.PORT || 4000);
   console.log(`App running on: http://localhost:${process.env.PORT || 4000}`);
-  console.log(`Swagger running on: http://localhost:${process.env.PORT || 4000}/api/docs`); // ✅
+  console.log(`Swagger running on: http://localhost:${process.env.PORT || 4000}/api/docs`);
 }
 bootstrap();
