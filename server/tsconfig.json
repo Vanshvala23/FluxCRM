@@ -1,15 +1,14 @@
 {
   "compilerOptions": {
-"module": "commonjs",
-"moduleResolution": "node",
+    "module": "node16",
+    "moduleResolution": "node16",      // ✅ replaces deprecated "node"
     "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
+    "declaration": true,               // ✅ removed isolatedModules (not needed)
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
+    "target": "ES2021",                // ✅ ES2021 is safer for NestJS + CommonJS
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
