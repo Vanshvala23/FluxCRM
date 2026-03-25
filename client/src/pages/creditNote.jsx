@@ -34,7 +34,7 @@ function CustomerSelect({ value, onChange }) {
   return (
     <div className="relative">
       <select
-        className="input appearance-none pr-8 w-full"
+        className="input appearance-none pr-8 w-full text-black"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
