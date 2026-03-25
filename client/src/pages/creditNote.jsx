@@ -39,7 +39,7 @@ function CustomerSelect({ value, onChange }) {
   onChange={(e) => onChange(e.target.value)}
   required
 >
-  <option value="" className="text-gray-900">
+  <option value="" className="text-black/70">
     {loading ? "Loading customers…" : "Select customer"}
   </option>
   {customers.map((c) => (
