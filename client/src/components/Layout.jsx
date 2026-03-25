@@ -33,7 +33,7 @@ const navGroups = [
     items: [
       { path: '/proposals', label: 'Proposals', icon: FileSignature },
       { path: '/invoices',  label: 'Invoices',  icon: FileText     },
-      {path:'/credit-notes',label:'Credit Notes',icon:FileText},
+      {path:'/credit-note',label:'Credit Notes',icon:FileText},
       { path: '/items',     label: 'Items',     icon: Package      },
     ],
   },
@@ -174,7 +174,7 @@ creditNotes?.slice(0, 3).forEach(cn => {
     title: 'New credit note created',
     desc:  `${cn.reference || 'CN'} — ₹${(cn.total || 0).toLocaleString()}`,
     time:  cn.createdAt,
-    link:  '/credit-notes',
+    link:  '/credit-note',
   });
 });
 

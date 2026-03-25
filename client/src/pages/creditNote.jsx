@@ -41,9 +41,9 @@ function CreditNoteModal({ note, onClose, onSaved }) {
       const payload = { ...form, items, subtotal, total };
 
       if (note)
-        await api.put(`/credit-notes/${note._id}`, payload);
+        await api.put(`/credit-note/${note._id}`, payload);
       else
-        await api.post(`/credit-notes`, payload);
+        await api.post(`/credit-note`, payload);
 
       onSaved();
     } catch (err) {
@@ -193,7 +193,7 @@ export default function CreditNotes() {
 
   const fetchNotes = () => {
     setLoading(true);
-    api.get("/credit-notes", { params: { search } })
+    api.get("/credit-note", { params: { search } })
       .then((res) => setNotes(res.data.data || res.data))
       .finally(() => setLoading(false));
   };
@@ -204,7 +204,7 @@ export default function CreditNotes() {
 
   const handleDelete = async (id) => {
     if (!confirm("Delete credit note?")) return;
-    await api.delete(`/credit-notes/${id}`);
+    await api.delete(`/credit-note/${id}`);
     fetchNotes();
   };
 
