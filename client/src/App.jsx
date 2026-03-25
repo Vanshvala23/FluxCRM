@@ -13,6 +13,7 @@ import Projects from './pages/Projects';
 import Tasks from './pages/Tasks';
 import Items from './pages/Items';
 import Invoices from './pages/Invoices';
+import CreditNote from './pages/creditNote';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/tasks" element={<ProtectedRoute><Layout><Tasks /></Layout></ProtectedRoute>} />
           <Route path="/items" element={<ProtectedRoute><Layout><Items/></Layout></ProtectedRoute>}/>
           <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
+          <Route path="/credit-notes" element={<ProtectedRoute><Layout><CreditNote /></Layout></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

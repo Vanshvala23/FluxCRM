@@ -33,6 +33,7 @@ const navGroups = [
     items: [
       { path: '/proposals', label: 'Proposals', icon: FileSignature },
       { path: '/invoices',  label: 'Invoices',  icon: FileText     },
+      {path:'/credit-notes',label:'Credit Notes',icon:FileText},
       { path: '/items',     label: 'Items',     icon: Package      },
     ],
   },
@@ -73,7 +74,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function buildNotifications(contacts, leads, tickets, proposals) {
+function buildNotifications(contacts, leads, tickets, proposals,creditNotes) {
   const items = [];
 
   // Recent contacts
@@ -165,6 +166,29 @@ function buildNotifications(contacts, leads, tickets, proposals) {
         link:  '/proposals',
       });
     });
+    // Credit Notes (recent)
+creditNotes?.slice(0, 3).forEach(cn => {
+  items.push({
+    id:    `credit-${cn._id}`,
+    type:  'info',
+    title: 'New credit note created',
+    desc:  `${cn.reference || 'CN'} — ₹${(cn.total || 0).toLocaleString()}`,
+    time:  cn.createdAt,
+    link:  '/credit-notes',
+  });
+});
+
+// Applied credit notes
+creditNotes?.filter(cn => cn.status === 'applied').slice(0, 2).forEach(cn => {
+  items.push({
+    id:    `credit-applied-${cn._id}`,
+    type:  'success',
+    title: 'Credit applied',
+    desc:  `₹${(cn.total || 0).toLocaleString()} applied to invoice`,
+    time:  cn.updatedAt,
+    link:  '/credit-notes',
+  });
+});
 
   return items
     .sort((a, b) => new Date(b.time) - new Date(a.time))
@@ -191,17 +215,19 @@ function NotificationsDropdown() {
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const [contactsRes, leadsRes, ticketsRes, proposalsRes] = await Promise.all([
+      const [contactsRes, leadsRes, ticketsRes, proposalsRes,creditNoteRes] = await Promise.all([
         api.get('/contacts'),
         api.get('/leads'),
         api.get('/tickets'),
         api.get('/proposals'),
+        api.get('/credit-notes'),
       ]);
       setNotifications(buildNotifications(
         contactsRes.data,
         leadsRes.data,
         ticketsRes.data,
         proposalsRes.data,
+        creditNoteRes.data,
       ));
     } catch {
       // silently fail — no toast, no console noise
@@ -352,6 +378,7 @@ function UserDropdown() {
       api.get('/tickets'),
       api.get('/proposals'),
       api.get('/invoices/stats'),
+      api.get('/credit-notes'),
     ]).then(([me, contacts, leads, tickets, proposals, invoiceStats]) => {
       setProfile(me.data);
       const proposalList = Array.isArray(proposals.data)
@@ -363,6 +390,9 @@ function UserDropdown() {
         tickets:   (Array.isArray(tickets.data) ? tickets.data : []).filter(t => t.status === 'open').length,
         proposals: proposalList.length,
         invoices:  invoiceStats.data?.total ?? 0,
+        creditNotes: Array.isArray(creditNotes.data)
+    ? creditNotes.data.length
+    : (creditNotes.data?.total ?? 0),
       });
     }).catch(() => {});
   }, [open]);
@@ -376,6 +406,7 @@ function UserDropdown() {
     { label: 'Tickets',   key: 'tickets',   link: '/tickets'   },
     { label: 'Proposals', key: 'proposals', link: '/proposals' },
     { label: 'Invoices',  key: 'invoices',  link: '/invoices'  },
+    { label: 'Credit Notes', key: 'creditNotes', link: '/credit-notes' },
   ];
 
   const menuItems = [
