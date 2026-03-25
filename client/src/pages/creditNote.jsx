@@ -35,7 +35,7 @@ function CustomerSelect({ value, onChange }) {
     <div className="relative">
       <select
         style={{ color: "#111827" }}
-        className="input appearance-none pr-8 w-full"
+        className="input pr-8 w-full"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
