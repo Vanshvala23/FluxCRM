@@ -77,7 +77,7 @@ FluxCRM/
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v18+
+- [Nest.js](https://nestjs.com/) v18+
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 - [MongoDB](https://www.mongodb.com/) (local or Atlas)
 
