@@ -34,16 +34,20 @@ function CustomerSelect({ value, onChange }) {
   return (
     <div className="relative">
       <select
-        className="input appearance-none pr-8 w-full text-black"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required
-      >
-        <option value="">{loading ? "Loading customers…" : "Select customer"}</option>
-        {customers.map((c) => (
-          <option key={c._id} value={c._id}>{c.name}</option>
-        ))}
-      </select>
+  className="input appearance-none pr-8 w-full text-gray-900"
+  value={value}
+  onChange={(e) => onChange(e.target.value)}
+  required
+>
+  <option value="" className="text-gray-900">
+    {loading ? "Loading customers…" : "Select customer"}
+  </option>
+  {customers.map((c) => (
+    <option key={c._id} value={c._id} className="text-gray-900">
+      {c.name}
+    </option>
+  ))}
+</select>
       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
     </div>
   );
@@ -141,14 +145,14 @@ function CreditNoteModal({ note, onClose, onSaved }) {
               <label className="field-label">Status</label>
               <div className="relative">
                 <select
-                  className="input appearance-none pr-8 w-full"
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                >
-                  {Object.entries(STATUS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
+  className="input appearance-none pr-8 w-full text-gray-900"
+  value={form.status}
+  onChange={(e) => setForm({ ...form, status: e.target.value })}
+>
+  {Object.entries(STATUS).map(([k, v]) => (
+    <option key={k} value={k} className="text-gray-900">{v.label}</option>
+  ))}
+</select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
