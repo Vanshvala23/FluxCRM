@@ -25,7 +25,7 @@ function CustomerSelect({ value, onChange }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/customers")
+    api.get("/contacts")
       .then((res) => setCustomers(res.data.data || res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
