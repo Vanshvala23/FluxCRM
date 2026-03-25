@@ -7,7 +7,7 @@ import {
   LogOut, Menu, X, Zap, ChevronRight, Bell,
   Search, Settings, User, Shield, ChevronDown,
   Check, Trash2, Info, AlertCircle, CheckCircle, CheckSquare,
-  FileSignature, Package, Loader2, RefreshCw, FolderKanban,
+  FileSignature, Package, Loader2, RefreshCw, FolderKanban,File
 } from 'lucide-react';
 
 // ── Nav structure ─────────────────────────────────────────────────────────────
@@ -51,6 +51,13 @@ const navGroups = [
       { path: '/projects', label: 'Projects', icon: FolderKanban },
       { path: '/tasks',    label: 'Tasks',    icon: CheckSquare  },
     ],
+  },
+  {
+    key:'utilities',
+    label:'Utilities',
+    items:[
+      {path:'/bulk-pdf',label:'Bulk-PDF',icon:File},
+    ]
   },
 ];
 
