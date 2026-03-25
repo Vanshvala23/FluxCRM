@@ -32,7 +32,7 @@ export default function App() {
           <Route path="/tasks" element={<ProtectedRoute><Layout><Tasks /></Layout></ProtectedRoute>} />
           <Route path="/items" element={<ProtectedRoute><Layout><Items/></Layout></ProtectedRoute>}/>
           <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
-          <Route path="/credit-notes" element={<ProtectedRoute><Layout><CreditNote /></Layout></ProtectedRoute>} />
+          <Route path="/credit-note" element={<ProtectedRoute><Layout><CreditNote /></Layout></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
