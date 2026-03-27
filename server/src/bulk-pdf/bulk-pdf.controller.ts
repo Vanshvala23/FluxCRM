@@ -26,19 +26,25 @@ export class BulkPdfController {
 
   // ─── EXPORT PDF ─────────────────────────────────────────
   @Post('export')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Generate merged PDF from records (invoices/proposals)',
-  })
-  @ApiResponse({ status: 201, description: 'PDF generated successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid filters / No records found' })
-  async export(@Body() dto: CreateBulkPdfDto) {
-    if (!dto.type) {
-      throw new BadRequestException('Type is required (invoices/proposals)');
-    }
-
-    return this.bulkPdfService.exportAndStore(dto);
+async export(
+  @Body() dto: CreateBulkPdfDto,
+  @Res() res: Response,
+) {
+  if (!dto.type) {
+    throw new BadRequestException('Type is required');
   }
+
+  const pdf = await this.bulkPdfService.exportAndStore(dto);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${pdf.originalName}"`,
+  );
+  res.setHeader('Content-Length', pdf.size);
+
+  return res.end(pdf.data); // 🔥 THIS triggers download
+}
 
   // ─── UPLOAD PDF FILES ───────────────────────────────────
   @Post('upload')
