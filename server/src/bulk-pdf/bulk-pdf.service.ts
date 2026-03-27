@@ -54,7 +54,10 @@ export class BulkPdfService {
   private recordToHtml(record: RecordShape, type: string): string {
     const number = record.invoiceNumber ?? record.proposalNumber ?? record._id;
 
-    const rawDate = record.invoiceDate ?? record.proposalDate;
+    const rawDate =
+  record.issueDate ||
+  record.invoiceDate ||
+  record.proposalDate;
     const date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : 'N/A';
 
     const customer =
@@ -120,10 +123,15 @@ export class BulkPdfService {
 
     // ✅ Apply filtering in JS (SAFE for string + Date)
     records = records.filter((r) => {
-  const raw =
-    r.issueDate ||
-    r.invoiceDate ||
-    r.proposalDate;
+  let raw = r[dateField];
+
+  // fallback (only for safety)
+  if (!raw) {
+    raw =
+      r.issueDate ||
+      r.invoiceDate ||
+      r.proposalDate;
+  }
 
   if (!raw) return false;
 
