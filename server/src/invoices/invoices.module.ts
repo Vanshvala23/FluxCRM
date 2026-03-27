@@ -11,6 +11,6 @@ import { ItemsModule } from '../items/items.module';
   ],
   controllers: [InvoicesController],
   providers: [InvoicesService],
-  exports:[InvoicesService]
+  exports:[InvoicesService,MongooseModule]
 })
 export class InvoicesModule {}
