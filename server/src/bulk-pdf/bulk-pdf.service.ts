@@ -215,4 +215,31 @@ export class BulkPdfService {
     const res = await this.bulkPdfModel.deleteMany({});
     return { deleted: res.deletedCount };
   }
+  async uploadMany(
+  files: Express.Multer.File[],
+  dto: CreateBulkPdfDto,
+): Promise<BulkPdfDocument[]> {
+  if (!files?.length) {
+    throw new BadRequestException('No PDF files provided');
+  }
+
+  const docs = files.map((file) => ({
+    originalName: file.originalname,
+    mimeType: file.mimetype,
+    size: file.size,
+    data: file.buffer,
+
+    description: dto.description ?? '',
+    uploadedBy: dto.uploadedBy ?? '',
+    type: dto.type ?? null,
+
+    fromDate: dto.fromDate ? new Date(dto.fromDate) : null,
+    toDate: dto.toDate ? new Date(dto.toDate) : null,
+
+    tags: dto.tags ?? [],
+    recordCount: 0,
+  }));
+
+  return this.bulkPdfModel.insertMany(docs);
+}
 }
