@@ -37,8 +37,8 @@ export class Invoice {
   @Prop({ type: Types.ObjectId, ref: 'Lead' })    lead!: Types.ObjectId;
 
   /* ── Dates ──────────────────────────────────────── */
-  @Prop({ required: true }) issueDate!: string;   // ISO date string
-  @Prop({ required: true }) dueDate!: string;
+  @Prop({ required: true,type:Date }) issueDate!: Date;   // ISO date string
+  @Prop({ required: true,type:Date }) dueDate!: Date;     // ISO date string
 
   /* ── Line items & totals ────────────────────────── */
   @Prop({ type: [Object], default: [] }) items!: InvoiceItem[];
