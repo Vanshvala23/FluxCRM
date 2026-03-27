@@ -107,7 +107,7 @@ export class BulkPdfService {
           draw(
             `${i + 1}. ${item.description || item.item} | Qty: ${
               item.quantity || item.qty
-            } | ₹${item.amount || 0}`,
+            } | INR ${item.amount || 0}`,
           );
         });
       } else {
@@ -115,7 +115,7 @@ export class BulkPdfService {
       }
 
       draw('');
-      draw(`Total: ₹${record.total ?? 0}`, 14);
+      draw(`Total: INR ${record.total}`, 14);
     }
 
     const pdfBytes = await pdfDoc.save();
