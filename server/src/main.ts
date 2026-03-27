@@ -12,7 +12,7 @@ async function bootstrap() {
   // lowest possible level — before ANY NestJS middleware, guards, or interceptors.
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.use((req: any, res: any, next: any) => {
-    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000','http://localhost:5174'];
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000','http://localhost:5174','https://crmflux.netlify.app'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
