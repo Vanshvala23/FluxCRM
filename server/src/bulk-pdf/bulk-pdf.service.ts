@@ -70,7 +70,7 @@ export class BulkPdfService {
     return record.customer ?? 'N/A';
   }
 
-  // ✅ PURE PDF-LIB (NO CHROME 🚀)
+  // ✅ PDF GENERATOR
   private async generatePdf(records: RecordShape[], type: string): Promise<Buffer> {
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -80,7 +80,13 @@ export class BulkPdfService {
       let y = 800;
 
       const draw = (text: string, size = 12) => {
-        page.drawText(text, { x: 50, y, size, font, color: rgb(0, 0, 0) });
+        page.drawText(text, {
+          x: 50,
+          y,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+        });
         y -= size + 8;
       };
 
@@ -107,7 +113,7 @@ export class BulkPdfService {
           draw(
             `${i + 1}. ${item.description || item.item} | Qty: ${
               item.quantity || item.qty
-            } | INR ${item.amount || 0}`,
+            } | Rs. ${item.amount || 0}`
           );
         });
       } else {
@@ -115,31 +121,25 @@ export class BulkPdfService {
       }
 
       draw('');
-      draw(`Total: INR ${record.total}`, 14);
+      draw(`Total: Rs. ${record.total ?? 0}`, 14);
     }
 
     const pdfBytes = await pdfDoc.save();
     return Buffer.from(pdfBytes);
   }
 
+  // ✅ MAIN EXPORT
   async exportAndStore(dto: CreateBulkPdfDto): Promise<BulkPdfDocument> {
     if (!dto.type) throw new BadRequestException('type is required');
 
     const model = this.getModel(dto.type);
     const dateField = dto.type === 'invoices' ? 'issueDate' : 'proposalDate';
 
-    let from: Date | null = null;
-    let to: Date | null = null;
+    let from: Date | null = dto.fromDate ? new Date(dto.fromDate) : null;
+    let to: Date | null = dto.toDate ? new Date(dto.toDate) : null;
 
-    if (dto.fromDate) {
-      from = new Date(dto.fromDate);
-      from.setHours(0, 0, 0, 0);
-    }
-
-    if (dto.toDate) {
-      to = new Date(dto.toDate);
-      to.setHours(23, 59, 59, 999);
-    }
+    if (from) from.setHours(0, 0, 0, 0);
+    if (to) to.setHours(23, 59, 59, 999);
 
     let records: RecordShape[] = await model.find().lean();
 
@@ -148,7 +148,6 @@ export class BulkPdfService {
       if (!raw) return false;
 
       const d = new Date(raw);
-
       if (from && d < from) return false;
       if (to && d > to) return false;
 
@@ -161,18 +160,18 @@ export class BulkPdfService {
       );
     }
 
-    console.log('Filtered records:', records.length);
-
     if (!records.length) {
-      throw new BadRequestException(
-        `No ${dto.type} found for selected filters`,
-      );
+      throw new BadRequestException(`No ${dto.type} found`);
     }
 
     const pdfBuffer = await this.generatePdf(records, dto.type);
 
+    const filename = `${dto.type || 'export'}-${
+      dto.fromDate || 'all'
+    }-to-${dto.toDate || 'all'}.pdf`;
+
     return this.bulkPdfModel.create({
-      originalName: `${dto.type}-${dto.fromDate ?? 'all'}-to-${dto.toDate ?? 'all'}.pdf`,
+      originalName: filename,
       mimeType: 'application/pdf',
       size: pdfBuffer.length,
       data: pdfBuffer,
@@ -187,6 +186,27 @@ export class BulkPdfService {
       tags: dto.tags ?? [],
       recordCount: records.length,
     });
+  }
+
+  // ✅ uploadMany FIX
+  async uploadMany(files: Express.Multer.File[], dto: CreateBulkPdfDto) {
+    if (!files?.length) throw new BadRequestException('No PDF files');
+
+    return this.bulkPdfModel.insertMany(
+      files.map((f) => ({
+        originalName: f.originalname,
+        mimeType: f.mimetype,
+        size: f.size,
+        data: f.buffer,
+        description: dto.description ?? '',
+        uploadedBy: dto.uploadedBy ?? '',
+        type: dto.type ?? null,
+        fromDate: dto.fromDate ? new Date(dto.fromDate) : null,
+        toDate: dto.toDate ? new Date(dto.toDate) : null,
+        tags: dto.tags ?? [],
+        recordCount: 0,
+      })),
+    );
   }
 
   async findAll() {
@@ -215,31 +235,4 @@ export class BulkPdfService {
     const res = await this.bulkPdfModel.deleteMany({});
     return { deleted: res.deletedCount };
   }
-  async uploadMany(
-  files: Express.Multer.File[],
-  dto: CreateBulkPdfDto,
-): Promise<BulkPdfDocument[]> {
-  if (!files?.length) {
-    throw new BadRequestException('No PDF files provided');
-  }
-
-  const docs = files.map((file) => ({
-    originalName: file.originalname,
-    mimeType: file.mimetype,
-    size: file.size,
-    data: file.buffer,
-
-    description: dto.description ?? '',
-    uploadedBy: dto.uploadedBy ?? '',
-    type: dto.type ?? null,
-
-    fromDate: dto.fromDate ? new Date(dto.fromDate) : null,
-    toDate: dto.toDate ? new Date(dto.toDate) : null,
-
-    tags: dto.tags ?? [],
-    recordCount: 0,
-  }));
-
-  return this.bulkPdfModel.insertMany(docs);
-}
 }
