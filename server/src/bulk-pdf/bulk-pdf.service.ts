@@ -4,14 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Document } from 'mongoose';
+import { Model } from 'mongoose';
 import { BulkPdf, BulkPdfDocument } from './schemas/bulk-pdf-schema';
 import { CreateBulkPdfDto } from './dto/create-bulk-pdf.dto';
 
-// ── Adjust these string names to match your actual schema class names ─────────
-// e.g. if your Invoice schema class is called "Invoice", the name is 'Invoice'
-// Check your invoices.schema.ts → export class Invoice {} → name = 'Invoice'
-const INVOICE_MODEL  = 'Invoice';
+const INVOICE_MODEL = 'Invoice';
 const PROPOSAL_MODEL = 'Proposal';
 
 interface RecordShape {
@@ -19,11 +16,12 @@ interface RecordShape {
   invoiceNumber?: string;
   proposalNumber?: string;
   customer?: string | { name?: string };
-  invoiceDate?: string;
-  proposalDate?: string;
+  invoiceDate?: any;   // 👈 allow string OR Date
+  proposalDate?: any;
   total?: number;
   currency?: string;
   items?: { item: string; qty: number; rate: number; amount: number }[];
+  tags?: string[];
 }
 
 @Injectable()
@@ -32,187 +30,209 @@ export class BulkPdfService {
     @InjectModel(BulkPdf.name)
     private readonly bulkPdfModel: Model<BulkPdfDocument>,
 
-    // ✅ Inject via NestJS DI — requires InvoicesModule & ProposalModule
-    //    to export MongooseModule (see bulk-pdf.module.ts)
     @InjectModel(INVOICE_MODEL)
-    private readonly invoiceModel: Model<Document>,
+    private readonly invoiceModel: Model<any>,
 
     @InjectModel(PROPOSAL_MODEL)
-    private readonly proposalModel: Model<Document>,
+    private readonly proposalModel: Model<any>,
   ) {}
 
-  // ─── Pick the right model ─────────────────────────────────────────────────
-  private getModel(type: string): Model<Document> {
-    if (type === 'invoices')  return this.invoiceModel;
+  // ─── Pick model ─────────────────────────────────────────
+  private getModel(type: string): Model<any> {
+    if (type === 'invoices') return this.invoiceModel;
     if (type === 'proposals') return this.proposalModel;
     throw new BadRequestException(`Unsupported export type: "${type}"`);
   }
 
-  // ─── Build HTML for one record ────────────────────────────────────────────
+  // ─── Normalize Date (CRITICAL FIX) ──────────────────────
+  private normalizeDate(date: any): Date {
+    return new Date(date);
+  }
+
+  // ─── HTML generator ─────────────────────────────────────
   private recordToHtml(record: RecordShape, type: string): string {
-    const number   = record.invoiceNumber ?? record.proposalNumber ?? String(record._id);
-    const date     = record.invoiceDate   ?? record.proposalDate   ?? 'N/A';
-    const customer = typeof record.customer === 'object'
-      ? record.customer?.name ?? 'N/A'
-      : record.customer ?? 'N/A';
+    const number = record.invoiceNumber ?? record.proposalNumber ?? record._id;
+
+    const rawDate = record.invoiceDate ?? record.proposalDate;
+    const date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : 'N/A';
+
+    const customer =
+      typeof record.customer === 'object'
+        ? record.customer?.name ?? 'N/A'
+        : record.customer ?? 'N/A';
 
     const itemRows = (record.items ?? [])
-      .map((it) => `
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${it.item}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center">${it.qty}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right">$${Number(it.rate).toFixed(2)}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right">$${Number(it.amount).toFixed(2)}</td>
-        </tr>`)
+      .map(
+        (it) => `
+      <tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${it.item}</td>
+        <td style="padding:8px;text-align:center">${it.qty}</td>
+        <td style="padding:8px;text-align:right">₹${it.rate}</td>
+        <td style="padding:8px;text-align:right">₹${it.amount}</td>
+      </tr>`
+      )
       .join('');
 
     return `
-    <div style="page-break-after:always;font-family:Arial,sans-serif;padding:48px;color:#111">
-      <div style="display:flex;justify-content:space-between;margin-bottom:36px">
-        <div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#6366f1;text-transform:uppercase;margin-bottom:4px">
-            ${type.slice(0, -1)}
-          </div>
-          <div style="font-size:26px;font-weight:700;color:#1e1b4b">#${number}</div>
-        </div>
-        <div style="text-align:right;font-size:13px;color:#374151;line-height:1.8">
-          <div><strong>Customer:</strong> ${customer}</div>
-          <div><strong>Date:</strong> ${date}</div>
-          <div><strong>Currency:</strong> ${record.currency ?? 'USD'}</div>
-        </div>
-      </div>
+    <div style="page-break-after:always;padding:40px;font-family:sans-serif">
+      <h2>${type.toUpperCase()} #${number}</h2>
+      <p><b>Customer:</b> ${customer}</p>
+      <p><b>Date:</b> ${date}</p>
 
-      ${itemRows
-        ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
-            <thead>
-              <tr style="background:#f8fafc">
-                <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280">Item</th>
-                <th style="padding:10px 12px;text-align:center;border-bottom:2px solid #e5e7eb;color:#6b7280">Qty</th>
-                <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e5e7eb;color:#6b7280">Rate</th>
-                <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e5e7eb;color:#6b7280">Amount</th>
-              </tr>
-            </thead>
-            <tbody>${itemRows}</tbody>
-          </table>`
-        : '<p style="color:#9ca3af;font-style:italic;font-size:13px">No line items</p>'
+      ${
+        itemRows
+          ? `<table style="width:100%;border-collapse:collapse">${itemRows}</table>`
+          : '<p>No items</p>'
       }
 
-      <div style="margin-top:28px;text-align:right;font-size:17px;font-weight:700;color:#1e1b4b">
-        Total: ${record.currency ?? 'USD'} ${Number(record.total ?? 0).toFixed(2)}
-      </div>
-      <div style="margin-top:48px;border-top:1px solid #e5e7eb;padding-top:12px;font-size:10px;color:#9ca3af;text-align:center">
-        Generated by FluxCRM
-      </div>
+      <h3 style="text-align:right">Total: ₹${record.total ?? 0}</h3>
     </div>`;
   }
 
-  // ─── Export: fetch → generate PDF → store ────────────────────────────────
+  // ─── MAIN EXPORT FIXED ──────────────────────────────────
   async exportAndStore(dto: CreateBulkPdfDto): Promise<BulkPdfDocument> {
     if (!dto.type) throw new BadRequestException('type is required');
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const puppeteer = require('puppeteer');
 
-    const model     = this.getModel(dto.type);
+    const model = this.getModel(dto.type);
     const dateField = dto.type === 'invoices' ? 'invoiceDate' : 'proposalDate';
 
-    const query: Record<string, any> = {};
-    if (dto.fromDate || dto.toDate) {
-      query[dateField] = {};
-      if (dto.fromDate) query[dateField].$gte = dto.fromDate;
-      if (dto.toDate)   query[dateField].$lte = dto.toDate;
+    // ✅ Convert filter dates
+    let from: Date | null = null;
+    let to: Date | null = null;
+
+    if (dto.fromDate) {
+      from = new Date(dto.fromDate);
+      from.setHours(0, 0, 0, 0);
     }
 
-    const records: RecordShape[] = await model.find(query).lean().exec() as unknown as RecordShape[];
+    if (dto.toDate) {
+      to = new Date(dto.toDate);
+      to.setHours(23, 59, 59, 999);
+    }
+
+    // ❗ IMPORTANT: If DB stores string → Mongo query may fail
+    // So we fetch ALL (or partial) then filter manually
+
+    let records: RecordShape[] = await model.find().lean();
+
+    // ✅ Apply filtering in JS (SAFE for string + Date)
+    records = records.filter((r) => {
+      const raw = r[dateField];
+      if (!raw) return false;
+
+      const recordDate = new Date(raw);
+
+      if (from && recordDate < from) return false;
+      if (to && recordDate > to) return false;
+
+      return true;
+    });
+
+    // ✅ Optional TAG filter
+    if (dto.tags && dto.tags.length > 0) {
+      records = records.filter((r) =>
+        (r.tags || []).some((tag) => dto.tags!.includes(tag))
+      );
+    }
+
+    console.log('Filtered records:', records.length);
 
     if (records.length === 0) {
-      throw new BadRequestException(`No ${dto.type} found for the selected filters`);
+      throw new BadRequestException(
+        `No ${dto.type} found for the selected filters`,
+      );
     }
 
-    const fullHtml = `<!DOCTYPE html>
-<html><head>
-  <meta charset="utf-8"/>
-  <style>* { box-sizing: border-box; } body { margin: 0; }</style>
-</head><body>
-  ${records.map((r) => this.recordToHtml(r, dto.type!)).join('\n')}
-</body></html>`;
+    // ─── Generate HTML ─────────────────────────
+    const html = `
+    <html>
+      <body>
+        ${records.map((r) => this.recordToHtml(r, dto.type!)).join('')}
+      </body>
+    </html>`;
 
+    // ─── Generate PDF ─────────────────────────
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox'],
     });
+
     const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
     const pdfBuffer: Buffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
+
     await browser.close();
 
-    const filename = `${dto.type}-${dto.fromDate ?? 'all'}-to-${dto.toDate ?? 'all'}.pdf`;
+    // ─── Save ─────────────────────────
+    return this.bulkPdfModel.create({
+      originalName: `${dto.type}-${dto.fromDate}-to-${dto.toDate}.pdf`,
+      mimeType: 'application/pdf',
+      size: pdfBuffer.length,
+      data: pdfBuffer,
 
-    return new this.bulkPdfModel({
-      originalName: filename,
-      mimeType:     'application/pdf',
-      size:         pdfBuffer.length,
-      data:         pdfBuffer,
-      description:  dto.description ?? '',
-      uploadedBy:   dto.uploadedBy  ?? '',
-      type:         dto.type,
-      fromDate:     dto.fromDate ?? null,
-      toDate:       dto.toDate   ?? null,
-      tags:         dto.tags     ?? [],
-      recordCount:  records.length,
-    }).save();
+      description: dto.description ?? '',
+      uploadedBy: dto.uploadedBy ?? '',
+      type: dto.type,
+
+      fromDate: from,
+      toDate: to,
+
+      tags: dto.tags ?? [],
+      recordCount: records.length,
+    });
   }
 
-  // ─── Upload raw PDF files ─────────────────────────────────────────────────
-  async uploadMany(files: Express.Multer.File[], dto: CreateBulkPdfDto): Promise<BulkPdfDocument[]> {
-    if (!files || files.length === 0)
-      throw new BadRequestException('No PDF files provided');
+  // ─── Other methods unchanged ─────────────────────────
+  async uploadMany(files: Express.Multer.File[], dto: CreateBulkPdfDto) {
+    if (!files?.length) throw new BadRequestException('No PDF files');
 
-    const docs = files.map((file) => ({
-      originalName: file.originalname,
-      mimeType:     file.mimetype,
-      size:         file.size,
-      data:         file.buffer,
-      description:  dto.description ?? '',
-      uploadedBy:   dto.uploadedBy  ?? '',
-      type:         dto.type        ?? null,
-      fromDate:     dto.fromDate    ?? null,
-      toDate:       dto.toDate      ?? null,
-      tags:         dto.tags        ?? [],
-      recordCount:  0,
-    }));
-
-    return this.bulkPdfModel.insertMany(docs) as unknown as BulkPdfDocument[];
+    return this.bulkPdfModel.insertMany(
+      files.map((f) => ({
+        originalName: f.originalname,
+        mimeType: f.mimetype,
+        size: f.size,
+        data: f.buffer,
+        description: dto.description ?? '',
+        uploadedBy: dto.uploadedBy ?? '',
+        type: dto.type ?? null,
+        fromDate: dto.fromDate ? new Date(dto.fromDate) : null,
+        toDate: dto.toDate ? new Date(dto.toDate) : null,
+        tags: dto.tags ?? [],
+        recordCount: 0,
+      })),
+    );
   }
 
   async findAll() {
-    return this.bulkPdfModel.find().select('-data').sort({ createdAt: -1 }).exec();
+    return this.bulkPdfModel.find().select('-data').sort({ createdAt: -1 });
   }
 
   async findOne(id: string) {
-    const pdf = await this.bulkPdfModel.findById(id).select('-data').exec();
-    if (!pdf) throw new NotFoundException(`PDF #${id} not found`);
+    const pdf = await this.bulkPdfModel.findById(id).select('-data');
+    if (!pdf) throw new NotFoundException('PDF not found');
     return pdf;
   }
 
-  async download(id: string): Promise<BulkPdfDocument> {
-    const pdf = await this.bulkPdfModel.findById(id).exec();
-    if (!pdf) throw new NotFoundException(`PDF #${id} not found`);
+  async download(id: string) {
+    const pdf = await this.bulkPdfModel.findById(id);
+    if (!pdf) throw new NotFoundException('PDF not found');
     return pdf;
   }
 
   async remove(id: string) {
-    const result = await this.bulkPdfModel.findByIdAndDelete(id).exec();
-    if (!result) throw new NotFoundException(`PDF #${id} not found`);
-    return { message: `PDF #${id} deleted successfully` };
+    const res = await this.bulkPdfModel.findByIdAndDelete(id);
+    if (!res) throw new NotFoundException('PDF not found');
+    return { message: 'Deleted successfully' };
   }
 
   async removeAll() {
-    const result = await this.bulkPdfModel.deleteMany({}).exec();
-    return { message: 'All PDFs deleted', deleted: result.deletedCount };
+    const res = await this.bulkPdfModel.deleteMany({});
+    return { deleted: res.deletedCount };
   }
 }

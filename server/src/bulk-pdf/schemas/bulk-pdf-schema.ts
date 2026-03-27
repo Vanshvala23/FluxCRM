@@ -27,11 +27,11 @@ export class BulkPdf {
   @Prop({ type: String, enum: ['invoices', 'proposals'], default: null })
   type!: string | null;
 
-  @Prop({ type: String, default: null })
-  fromDate!: string | null;
+  @Prop({ type: Date, default: null })
+  fromDate!: Date | null;
 
-  @Prop({ type: String, default: null })
-  toDate!: string | null;
+  @Prop({ type: Date, default: null })
+  toDate!: Date | null;
 
   @Prop({ type: [String], default: [] })
   tags!: string[];

@@ -3,14 +3,16 @@ import {
   Param, Body, Res, UseGuards,
   UseInterceptors, UploadedFiles,
   BadRequestException,
+  HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type{ Response } from 'express';
+import type { Response } from 'express';
 import {
   ApiTags, ApiBearerAuth, ApiOperation,
   ApiConsumes, ApiBody, ApiParam, ApiResponse,
 } from '@nestjs/swagger';
+
 import { BulkPdfService } from './bulk-pdf.service';
 import { CreateBulkPdfDto } from './dto/create-bulk-pdf.dto';
 import { JwtAuthGuard } from '../auth/jwt.auth.guard';
@@ -22,89 +24,116 @@ import { JwtAuthGuard } from '../auth/jwt.auth.guard';
 export class BulkPdfController {
   constructor(private readonly bulkPdfService: BulkPdfService) {}
 
-  // ─── Export records as merged PDF ─────────────────────────────────────────
+  // ─── EXPORT PDF ─────────────────────────────────────────
   @Post('export')
-  @ApiOperation({ summary: 'Fetch records by type & date range, generate merged PDF, store in MongoDB' })
-  @ApiResponse({ status: 201, description: 'PDF exported and stored successfully' })
-  @ApiResponse({ status: 400, description: 'No records found or invalid type' })
-  export(@Body() dto: CreateBulkPdfDto) {
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Generate merged PDF from records (invoices/proposals)',
+  })
+  @ApiResponse({ status: 201, description: 'PDF generated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid filters / No records found' })
+  async export(@Body() dto: CreateBulkPdfDto) {
+    if (!dto.type) {
+      throw new BadRequestException('Type is required (invoices/proposals)');
+    }
+
     return this.bulkPdfService.exportAndStore(dto);
   }
 
-  // ─── Upload raw PDF files ─────────────────────────────────────────────────
+  // ─── UPLOAD PDF FILES ───────────────────────────────────
   @Post('upload')
   @UseInterceptors(
     FilesInterceptor('files', 20, {
       storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
-          return cb(new BadRequestException('Only PDF files are allowed'), false);
+          return cb(
+            new BadRequestException('Only PDF files are allowed'),
+            false,
+          );
         }
         cb(null, true);
       },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     }),
   )
-  @ApiOperation({ summary: 'Upload raw PDF files and store in MongoDB' })
+  @ApiOperation({ summary: 'Upload PDF files and store in MongoDB' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        files: { type: 'array', items: { type: 'string', format: 'binary' } },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
         description: { type: 'string' },
         uploadedBy: { type: 'string' },
       },
     },
   })
-  upload(
+  async upload(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: CreateBulkPdfDto,
   ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No PDF files uploaded');
+    }
+
     return this.bulkPdfService.uploadMany(files, dto);
   }
 
-  // ─── List all PDFs (metadata only) ───────────────────────────────────────
+  // ─── LIST ALL PDFs ─────────────────────────────────────
   @Get()
-  @ApiOperation({ summary: 'List all stored PDFs (no binary data)' })
-  findAll() {
+  @ApiOperation({ summary: 'Get all stored PDFs (metadata only)' })
+  async findAll() {
     return this.bulkPdfService.findAll();
   }
 
-  // ─── Get single PDF metadata ──────────────────────────────────────────────
+  // ─── GET SINGLE PDF METADATA ───────────────────────────
   @Get(':id')
-  @ApiOperation({ summary: 'Get metadata of a single PDF' })
+  @ApiOperation({ summary: 'Get PDF metadata by ID' })
   @ApiParam({ name: 'id', description: 'MongoDB ObjectId' })
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.bulkPdfService.findOne(id);
   }
 
-  // ─── Download PDF ─────────────────────────────────────────────────────────
+  // ─── DOWNLOAD PDF (FIXED) ──────────────────────────────
   @Get(':id/download')
-  @ApiOperation({ summary: 'Download the PDF binary by ID' })
+  @ApiOperation({ summary: 'Download PDF file' })
   @ApiParam({ name: 'id', description: 'MongoDB ObjectId' })
-  async download(@Param('id') id: string, @Res() res: Response) {
+  async download(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
     const pdf = await this.bulkPdfService.download(id);
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${pdf.originalName}"`,
-      'Content-Length': pdf.size,
-    });
-    res.send(pdf.data);
+
+    if (!pdf?.data) {
+      throw new BadRequestException('Invalid PDF data');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${pdf.originalName}"`,
+    );
+    res.setHeader('Content-Length', pdf.size);
+
+    return res.end(pdf.data); // ✅ FIX (important)
   }
 
-  // ─── Delete one ───────────────────────────────────────────────────────────
+  // ─── DELETE ONE ────────────────────────────────────────
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a PDF by ID' })
   @ApiParam({ name: 'id', description: 'MongoDB ObjectId' })
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string) {
     return this.bulkPdfService.remove(id);
   }
 
-  // ─── Delete all ───────────────────────────────────────────────────────────
+  // ─── DELETE ALL ────────────────────────────────────────
   @Delete()
-  @ApiOperation({ summary: 'Delete all stored PDFs' })
-  removeAll() {
+  @ApiOperation({ summary: 'Delete all PDFs' })
+  async removeAll() {
     return this.bulkPdfService.removeAll();
   }
 }
