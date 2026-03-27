@@ -16,6 +16,7 @@ interface RecordShape {
   invoiceNumber?: string;
   proposalNumber?: string;
   customer?: string | { name?: string };
+  issueDate?:any;
   invoiceDate?: any;   // 👈 allow string OR Date
   proposalDate?: any;
   total?: number;
@@ -96,7 +97,7 @@ export class BulkPdfService {
     const puppeteer = require('puppeteer');
 
     const model = this.getModel(dto.type);
-    const dateField = dto.type === 'invoices' ? 'invoiceDate' : 'proposalDate';
+   const dateField = dto.type === 'invoices' ? 'issueDate' : 'proposalDate';
 
     // ✅ Convert filter dates
     let from: Date | null = null;
@@ -119,16 +120,20 @@ export class BulkPdfService {
 
     // ✅ Apply filtering in JS (SAFE for string + Date)
     records = records.filter((r) => {
-      const raw = r[dateField];
-      if (!raw) return false;
+  const raw =
+    r.issueDate ||
+    r.invoiceDate ||
+    r.proposalDate;
 
-      const recordDate = new Date(raw);
+  if (!raw) return false;
 
-      if (from && recordDate < from) return false;
-      if (to && recordDate > to) return false;
+  const recordDate = new Date(raw);
 
-      return true;
-    });
+  if (from && recordDate < from) return false;
+  if (to && recordDate > to) return false;
+
+  return true;
+});
 
     // ✅ Optional TAG filter
     if (dto.tags && dto.tags.length > 0) {
