@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+
 import { BulkPdf, BulkPdfDocument } from './schemas/bulk-pdf-schema';
 import { CreateBulkPdfDto } from './dto/create-bulk-pdf.dto';
 
@@ -15,13 +17,18 @@ interface RecordShape {
   _id: string;
   invoiceNumber?: string;
   proposalNumber?: string;
-  customer?: string | { name?: string };
-  issueDate?:any;
-  invoiceDate?: any;   // 👈 allow string OR Date
+
+  issueDate?: any;
+  invoiceDate?: any;
   proposalDate?: any;
+
+  clientName?: string; // 👈 IMPORTANT (your schema)
+  customer?: string | { name?: string };
+
   total?: number;
   currency?: string;
-  items?: { item: string; qty: number; rate: number; amount: number }[];
+
+  items?: any[];
   tags?: string[];
 }
 
@@ -38,71 +45,103 @@ export class BulkPdfService {
     private readonly proposalModel: Model<any>,
   ) {}
 
-  // ─── Pick model ─────────────────────────────────────────
+  // ─── Model picker ─────────────────────────
   private getModel(type: string): Model<any> {
     if (type === 'invoices') return this.invoiceModel;
     if (type === 'proposals') return this.proposalModel;
-    throw new BadRequestException(`Unsupported export type: "${type}"`);
+    throw new BadRequestException(`Unsupported type: ${type}`);
   }
 
-  // ─── Normalize Date (CRITICAL FIX) ──────────────────────
-  private normalizeDate(date: any): Date {
-    return new Date(date);
+  // ─── Extract Date safely ──────────────────
+  private getDate(record: RecordShape, field: string) {
+    return (
+      record[field] ||
+      record.issueDate ||
+      record.invoiceDate ||
+      record.proposalDate
+    );
   }
 
-  // ─── HTML generator ─────────────────────────────────────
-  private recordToHtml(record: RecordShape, type: string): string {
-    const number = record.invoiceNumber ?? record.proposalNumber ?? record._id;
+  // ─── Extract Customer (FIXED) ─────────────
+  private getCustomer(record: RecordShape) {
+    if (record.clientName) return record.clientName;
 
-    const rawDate =
-  record.issueDate ||
-  record.invoiceDate ||
-  record.proposalDate;
-    const date = rawDate ? new Date(rawDate).toISOString().split('T')[0] : 'N/A';
+    if (typeof record.customer === 'object') {
+      return record.customer?.name ?? 'N/A';
+    }
 
-    const customer =
-      typeof record.customer === 'object'
-        ? record.customer?.name ?? 'N/A'
-        : record.customer ?? 'N/A';
+    return record.customer ?? 'N/A';
+  }
 
-    const itemRows = (record.items ?? [])
-      .map(
-        (it) => `
-      <tr>
-        <td style="padding:8px;border-bottom:1px solid #eee">${it.item}</td>
-        <td style="padding:8px;text-align:center">${it.qty}</td>
-        <td style="padding:8px;text-align:right">₹${it.rate}</td>
-        <td style="padding:8px;text-align:right">₹${it.amount}</td>
-      </tr>`
-      )
-      .join('');
+  // ─── PDF Generator (pdf-lib) ──────────────
+  private async generatePdf(records: RecordShape[], type: string): Promise<Buffer> {
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    return `
-    <div style="page-break-after:always;padding:40px;font-family:sans-serif">
-      <h2>${type.toUpperCase()} #${number}</h2>
-      <p><b>Customer:</b> ${customer}</p>
-      <p><b>Date:</b> ${date}</p>
+    for (const record of records) {
+      const page = pdfDoc.addPage([595, 842]); // A4
+      let y = 800;
 
-      ${
-        itemRows
-          ? `<table style="width:100%;border-collapse:collapse">${itemRows}</table>`
-          : '<p>No items</p>'
+      const draw = (text: string, size = 12) => {
+        page.drawText(text, {
+          x: 50,
+          y,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+        });
+        y -= size + 8;
+      };
+
+      const number =
+        record.invoiceNumber ?? record.proposalNumber ?? record._id;
+
+      const rawDate = this.getDate(record, 'issueDate');
+      const date = rawDate
+        ? new Date(rawDate).toISOString().split('T')[0]
+        : 'N/A';
+
+      const customer = this.getCustomer(record);
+
+      // ─── HEADER ─────────────────
+      draw(`${type.toUpperCase()} #${number}`, 18);
+      draw('');
+      draw(`Customer: ${customer}`);
+      draw(`Date: ${date}`);
+      draw('');
+
+      // ─── ITEMS ─────────────────
+      if (record.items?.length) {
+        draw('Items:', 14);
+
+        record.items.forEach((item: any, i: number) => {
+          draw(
+            `${i + 1}. ${item.description || item.item} | Qty: ${item.quantity || item.qty
+            } | ₹${item.amount || 0}`
+          );
+        });
+      } else {
+        draw('No items');
       }
 
-      <h3 style="text-align:right">Total: ₹${record.total ?? 0}</h3>
-    </div>`;
+      draw('');
+
+      // ─── TOTAL ─────────────────
+      draw(`Total: ₹${record.total ?? 0}`, 14);
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
   }
 
-  // ─── MAIN EXPORT FIXED ──────────────────────────────────
+  // ─── MAIN EXPORT ─────────────────────────
   async exportAndStore(dto: CreateBulkPdfDto): Promise<BulkPdfDocument> {
     if (!dto.type) throw new BadRequestException('type is required');
 
-    const puppeteer = require('puppeteer');
-
     const model = this.getModel(dto.type);
-   const dateField = dto.type === 'invoices' ? 'issueDate' : 'proposalDate';
+    const dateField = dto.type === 'invoices' ? 'issueDate' : 'proposalDate';
 
-    // ✅ Convert filter dates
+    // ─── Convert filter dates ─────
     let from: Date | null = null;
     let to: Date | null = null;
 
@@ -116,75 +155,45 @@ export class BulkPdfService {
       to.setHours(23, 59, 59, 999);
     }
 
-    // ❗ IMPORTANT: If DB stores string → Mongo query may fail
-    // So we fetch ALL (or partial) then filter manually
-
+    // ─── Fetch records ────────────
     let records: RecordShape[] = await model.find().lean();
 
-    // ✅ Apply filtering in JS (SAFE for string + Date)
+    // ─── Filter by date ───────────
     records = records.filter((r) => {
-  let raw = r[dateField];
+      const raw = this.getDate(r, dateField);
+      if (!raw) return false;
 
-  // fallback (only for safety)
-  if (!raw) {
-    raw =
-      r.issueDate ||
-      r.invoiceDate ||
-      r.proposalDate;
-  }
+      const d = new Date(raw);
 
-  if (!raw) return false;
+      if (from && d < from) return false;
+      if (to && d > to) return false;
 
-  const recordDate = new Date(raw);
+      return true;
+    });
 
-  if (from && recordDate < from) return false;
-  if (to && recordDate > to) return false;
-
-  return true;
-});
-
-    // ✅ Optional TAG filter
-    if (dto.tags && dto.tags.length > 0) {
+    // ─── Filter by tags ───────────
+    if (dto.tags?.length) {
       records = records.filter((r) =>
-        (r.tags || []).some((tag) => dto.tags!.includes(tag))
+        (r.tags || []).some((t) => dto.tags!.includes(t)),
       );
     }
 
     console.log('Filtered records:', records.length);
 
-    if (records.length === 0) {
+    if (!records.length) {
       throw new BadRequestException(
-        `No ${dto.type} found for the selected filters`,
+        `No ${dto.type} found for selected filters`,
       );
     }
 
-    // ─── Generate HTML ─────────────────────────
-    const html = `
-    <html>
-      <body>
-        ${records.map((r) => this.recordToHtml(r, dto.type!)).join('')}
-      </body>
-    </html>`;
+    // ─── Generate PDF ─────────────
+    const pdfBuffer = await this.generatePdf(records, dto.type);
 
-    // ─── Generate PDF ─────────────────────────
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox'],
-    });
+    const filename = `${dto.type}-${dto.fromDate ?? 'all'}-to-${dto.toDate ?? 'all'}.pdf`;
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdfBuffer: Buffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-    });
-
-    await browser.close();
-
-    // ─── Save ─────────────────────────
+    // ─── Save ─────────────────────
     return this.bulkPdfModel.create({
-      originalName: `${dto.type}-${dto.fromDate}-to-${dto.toDate}.pdf`,
+      originalName: filename,
       mimeType: 'application/pdf',
       size: pdfBuffer.length,
       data: pdfBuffer,
@@ -201,7 +210,7 @@ export class BulkPdfService {
     });
   }
 
-  // ─── Other methods unchanged ─────────────────────────
+  // ─── OTHER METHODS ─────────────
   async uploadMany(files: Express.Multer.File[], dto: CreateBulkPdfDto) {
     if (!files?.length) throw new BadRequestException('No PDF files');
 
