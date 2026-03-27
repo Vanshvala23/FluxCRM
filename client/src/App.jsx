@@ -14,6 +14,7 @@ import Tasks from './pages/Tasks';
 import Items from './pages/Items';
 import Invoices from './pages/Invoices';
 import CreditNote from './pages/creditNote';
+import BulkPdfExport from './pages/BulkPdf';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/items" element={<ProtectedRoute><Layout><Items/></Layout></ProtectedRoute>}/>
           <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
           <Route path="/credit-note" element={<ProtectedRoute><Layout><CreditNote /></Layout></ProtectedRoute>} />
+          <Route path="/bulk-pdf-export" element={<ProtectedRoute><Layout><BulkPdfExport /></Layout></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

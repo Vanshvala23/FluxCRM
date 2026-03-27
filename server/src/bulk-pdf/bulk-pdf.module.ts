@@ -1,9 +1,17 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { BulkPdfService } from './bulk-pdf.service';
 import { BulkPdfController } from './bulk-pdf.controller';
+import { BulkPdf, BulkPdfSchema } from './schemas/bulk-pdf-schema';
 
 @Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: BulkPdf.name, schema: BulkPdfSchema },
+    ]),
+  ],
   controllers: [BulkPdfController],
   providers: [BulkPdfService],
+  exports: [BulkPdfService],
 })
 export class BulkPdfModule {}
