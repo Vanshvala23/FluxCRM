@@ -56,7 +56,7 @@ const navGroups = [
     key:'utilities',
     label:'Utilities',
     items:[
-      {path:'/bulk-pdf',label:'Bulk-PDF',icon:File},
+      {path:'/bulk-pdf-export',label:'Bulk-PDF',icon:File},
     ]
   },
 ];
