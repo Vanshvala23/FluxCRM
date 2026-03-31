@@ -35,6 +35,7 @@ const navGroups = [
       { path: '/invoices',  label: 'Invoices',  icon: FileText     },
       {path:'/credit-note',label:'Credit Notes',icon:FileText},
       { path: '/items',     label: 'Items',     icon: Package      },
+      {path:'/payments',label:'Payments',icon:FileText},
     ],
   },
   {
@@ -81,7 +82,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function buildNotifications(contacts, leads, tickets, proposals,creditNotes) {
+function buildNotifications(contacts, leads, tickets, proposals,creditNotes,payments) {
   const items = [];
 
   // Recent contacts
@@ -196,6 +197,16 @@ creditNotes?.filter(cn => cn.status === 'applied').slice(0, 2).forEach(cn => {
     link:  '/credit-notes',
   });
 });
+payments?.slice(0, 3).forEach(p => {
+  items.push({
+    id:    `payment-${p._id}`,
+    type:  'success',
+    title: 'New payment received',
+    desc:  `${p.reference || 'Payment'} — ₹${(p.amount || 0).toLocaleString()}`,
+    time:  p.createdAt,
+    link:  '/payments',
+  });
+});
 
   return items
     .sort((a, b) => new Date(b.time) - new Date(a.time))
@@ -228,6 +239,7 @@ function NotificationsDropdown() {
         api.get('/tickets'),
         api.get('/proposals'),
         api.get('/credit-notes'),
+        api.get('/payments'),
       ]);
       setNotifications(buildNotifications(
         contactsRes.data,
@@ -235,6 +247,7 @@ function NotificationsDropdown() {
         ticketsRes.data,
         proposalsRes.data,
         creditNoteRes.data,
+        paymentsRes.data
       ));
     } catch {
       // silently fail — no toast, no console noise
@@ -386,7 +399,8 @@ function UserDropdown() {
       api.get('/proposals'),
       api.get('/invoices/stats'),
       api.get('/credit-notes'),
-    ]).then(([me, contacts, leads, tickets, proposals, invoiceStats]) => {
+      api.get('/payments'),
+    ]).then(([me, contacts, leads, tickets, proposals, invoiceStats, creditNotes, payments]) => {
       setProfile(me.data);
       const proposalList = Array.isArray(proposals.data)
         ? proposals.data
@@ -397,9 +411,10 @@ function UserDropdown() {
         tickets:   (Array.isArray(tickets.data) ? tickets.data : []).filter(t => t.status === 'open').length,
         proposals: proposalList.length,
         invoices:  invoiceStats.data?.total ?? 0,
-        creditNotes: Array.isArray(creditNotes.data)
-    ? creditNotes.data.length
-    : (creditNotes.data?.total ?? 0),
+        creditNotes: Array.isArray(creditNotes.data),
+        payments: Array.isArray(payments.data)
+          ? payments.data.length
+          : (payments.data?.total ?? 0),
       });
     }).catch(() => {});
   }, [open]);
@@ -414,6 +429,7 @@ function UserDropdown() {
     { label: 'Proposals', key: 'proposals', link: '/proposals' },
     { label: 'Invoices',  key: 'invoices',  link: '/invoices'  },
     { label: 'Credit Notes', key: 'creditNotes', link: '/credit-notes' },
+    { label: 'Payments', key: 'payments', link: '/payments' },
   ];
 
   const menuItems = [
