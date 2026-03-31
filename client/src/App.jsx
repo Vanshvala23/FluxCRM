@@ -34,7 +34,7 @@ export default function App() {
           <Route path="/items" element={<ProtectedRoute><Layout><Items/></Layout></ProtectedRoute>}/>
           <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
           <Route path="/credit-note" element={<ProtectedRoute><Layout><CreditNote /></Layout></ProtectedRoute>} />
-          <Route path="/bulk-pdf-export" element={<ProtectedRoute><Layout><BulkPdfExport /></Layout></ProtectedRoute>} />
+          {/* <Route path="/bulk-pdf-export" element={<ProtectedRoute><Layout><BulkPdfExport /></Layout></ProtectedRoute>} /> */}
         </Routes>
       </BrowserRouter>
     </AuthProvider>
