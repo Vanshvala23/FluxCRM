@@ -11,7 +11,11 @@ export class Contact {
   @Prop() phone: string;
   @Prop() company: string;
   @Prop() jobTitle: string;
-  @Prop({ default: 'active', enum: ['active', 'inactive'] }) status: string;
+  @Prop({
+  default: 'lead',
+  enum: ['lead', 'active', 'inactive', 'client'],
+})
+status: string;
   @Prop({ type: Types.ObjectId, ref: 'User' }) assignedTo: Types.ObjectId;
   @Prop() notes: string;
 }
