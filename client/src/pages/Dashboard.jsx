@@ -265,7 +265,6 @@ export default function Dashboard() {
       icon: Ticket,
       color: 'bg-amber-50 text-amber-600',
       change: '-3%',
-      link:'/tickets',
     },
     {
       label: 'Revenue Won',
@@ -567,27 +566,6 @@ export default function Dashboard() {
             />
           </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-  <div className="flex justify-between mb-3">
-    <h2 className="font-semibold">Recent Tickets</h2>
-    <Link to="/tickets" className="text-indigo-600 text-sm">
-      View all →
-    </Link>
-  </div>
-
-  {recentTickets.length === 0 ? (
-    <p className="text-gray-400 text-sm">No tickets</p>
-  ) : (
-    <div className="space-y-2">
-      {recentTickets.map(t => (
-        <div key={t._id} className="flex justify-between text-sm">
-          <span>{t.title}</span>
-          <span className="text-gray-400">{t.status}</span>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
           <h2 className="font-semibold text-gray-900 mb-4">
