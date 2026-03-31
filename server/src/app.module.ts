@@ -16,6 +16,7 @@ import { CreditNoteModule } from './credit-note/credit-note.module';
 import { EstimationsModule } from './estimations/estimations.module';
 import { ItemsModule } from './items/items.module';
 import { BulkPdfModule } from './bulk-pdf/bulk-pdf.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { BulkPdfModule } from './bulk-pdf/bulk-pdf.module';
     EstimationsModule,
     ItemsModule,
     BulkPdfModule,
+    PaymentsModule,
   ],
   controllers: [AppController], 
   providers: [AppService],
