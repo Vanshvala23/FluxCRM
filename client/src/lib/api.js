@@ -1,27 +1,27 @@
 import axios from 'axios';
 
+if (!import.meta.env.VITE_API_URL) {
+  throw new Error('API URL not defined');
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://flux-crm-six.vercel.app/api',
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ✅ REQUEST INTERCEPTOR
 api.interceptors.request.use((config) => {
-  const rawToken = localStorage.getItem('flux_token');
-  const token = rawToken?.trim();
+  const token = localStorage.getItem('flux_token')?.trim();
 
-  console.log('🔥 SENDING TOKEN:', token);
-
-  if (token) {
+  if (token && typeof token === 'string') {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
 });
 
-// ✅ RESPONSE INTERCEPTOR
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -30,10 +30,8 @@ api.interceptors.response.use(
       err.config?.url?.includes('/auth/register');
 
     if (err.response?.status === 401 && !isAuthRoute) {
-      console.warn('❌ Unauthorized — token may be invalid');
-
-      localStorage.removeItem('flux_token');
-      localStorage.removeItem('flux_user');
+      localStorage.clear();
+      window.location.href = '/login';
     }
 
     return Promise.reject(err);
