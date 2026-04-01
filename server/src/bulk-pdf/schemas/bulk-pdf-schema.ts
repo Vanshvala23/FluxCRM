@@ -6,16 +6,17 @@ export type BulkPdfDocument = BulkPdf & Document;
 @Schema({ timestamps: true })
 export class BulkPdf {
   @Prop({ required: true })
-  originalName!: string; // e.g. "invoices-2024-01-01-to-2024-12-31.pdf"
+  originalName!: string;
 
   @Prop({ required: true })
-  mimeType!: string; // always "application/pdf"
+  mimeType!: string;
 
   @Prop({ required: true })
-  size!: number; // file size in bytes
+  size!: number;
 
-  @Prop({ required: true, type: Buffer })
-  data!: Buffer; // merged PDF binary stored in MongoDB
+  // ✅ Explicit Buffer type — avoids BSON Binary wrapping issues on retrieval
+  @Prop({ type: Buffer, required: true })
+  data!: Buffer;
 
   @Prop({ default: '' })
   description!: string;
@@ -23,7 +24,6 @@ export class BulkPdf {
   @Prop({ default: '' })
   uploadedBy!: string;
 
-  // ─── Export metadata ──────────────────────────────────────────────────────
   @Prop({ type: String, enum: ['invoices', 'proposals'], default: null })
   type!: string | null;
 
@@ -37,7 +37,7 @@ export class BulkPdf {
   tags!: string[];
 
   @Prop({ default: 0 })
-  recordCount!: number; // how many records were merged
+  recordCount!: number;
 }
 
 export const BulkPdfSchema = SchemaFactory.createForClass(BulkPdf);
