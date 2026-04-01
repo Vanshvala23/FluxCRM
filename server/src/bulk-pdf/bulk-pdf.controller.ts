@@ -2,7 +2,6 @@ import {
   Controller, Get, Post, Delete,
   Param, Body, Res, UseGuards,
   UseInterceptors, UploadedFiles,
-  BadRequestException,
 } from '@nestjs/common';
 
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -19,49 +18,40 @@ export class BulkPdfController {
   constructor(private readonly bulkPdfService: BulkPdfService) {}
 
   @Post('export')
-  async export(@Body() dto: CreateBulkPdfDto) {
+  export(@Body() dto: CreateBulkPdfDto) {
     return this.bulkPdfService.exportAndStore(dto);
   }
 
   @Get(':id/download')
   async download(@Param('id') id: string, @Res() res: Response) {
     const pdf = await this.bulkPdfService.download(id);
+    const raw = pdf.data as any;
 
-    // MongoDB Binary -> plain Buffer conversion
     let buffer: Buffer;
-    if (Buffer.isBuffer(pdf.data)) {
-      buffer = pdf.data;
-    } else if ((pdf.data as any)?.buffer) {
-      buffer = Buffer.from((pdf.data as any).buffer);
-    } else {
-      buffer = Buffer.from(pdf.data as any);
-    }
 
-    // Validate PDF header
-    if (buffer.length < 5 || !buffer.slice(0, 5).toString('ascii').startsWith('%PDF')) {
-      return res.status(500).json({ message: 'Stored binary is not a valid PDF. Re-export and try again.' });
+    if (Buffer.isBuffer(raw)) {
+      // Already a plain Node.js Buffer
+      buffer = raw;
+    } else if (raw?._bsontype === 'Binary') {
+      // BSON Binary — .value(true) returns a Buffer directly
+      buffer = Buffer.from(raw.value(true));
+    } else if (raw?.buffer instanceof ArrayBuffer) {
+      // Uint8Array wrapping an ArrayBuffer
+      buffer = Buffer.from(raw.buffer);
+    } else {
+      // Last resort: stringify to base64 then decode
+      buffer = Buffer.from(Buffer.from(raw).toString('base64'), 'base64');
     }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${pdf.originalName}"`);
     res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-    return res.end(buffer);
+    res.end(buffer);
   }
 
   @Post('upload')
-  @UseInterceptors(
-    FilesInterceptor('files', 20, {
-      storage: memoryStorage(),
-      fileFilter: (_req, file, cb) => {
-        if (file.mimetype !== 'application/pdf') {
-          return cb(new BadRequestException('Only PDF files are allowed'), false);
-        }
-        cb(null, true);
-      },
-    }),
-  )
-  async upload(
+  @UseInterceptors(FilesInterceptor('files', 20, { storage: memoryStorage() }))
+  upload(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: CreateBulkPdfDto,
   ) {
