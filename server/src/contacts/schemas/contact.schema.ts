@@ -15,6 +15,8 @@ export class Contact {
   default: 'lead',
   enum: ['lead', 'active', 'inactive', 'client'],
 })
+@Prop({ type: [{ type: Types.ObjectId, ref: 'Group' }], default: [] })
+groups: Types.ObjectId[];
 status: string;
   @Prop({ type: Types.ObjectId, ref: 'User' }) assignedTo: Types.ObjectId;
   @Prop() notes: string;
