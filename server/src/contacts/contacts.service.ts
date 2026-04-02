@@ -63,17 +63,18 @@ export class ContactsService {
     return this.model
       .find(filter)
       .populate('assignedTo', 'name email')
+      .populate('groups', 'name')
       .sort({ createdAt: -1 });
   }
 
   async findOne(id: string) {
-    const doc = await this.model.findById(id).populate('assignedTo', 'name email');
+    const doc = await this.model.findById(id).populate('assignedTo', 'name email').populate('groups', 'name');
     if (!doc) throw new NotFoundException('Contact not found');
     return doc;
   }
 
   async update(id: string, dto: UpdateContactDto) {
-    const doc = await this.model.findByIdAndUpdate(id, dto, { new: true });
+    const doc = await this.model.findByIdAndUpdate(id, dto, { new: true }).populate('assignedTo', 'name email').populate('groups', 'name');
     if (!doc) throw new NotFoundException('Contact not found');
     return doc;
   }
