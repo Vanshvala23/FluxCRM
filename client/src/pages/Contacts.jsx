@@ -67,6 +67,7 @@ function GroupSelect({ selected, onChange }) {
 
   const handleAddGroup = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // ✅ prevent bubbling into parent contact form
     if (!newName.trim()) return;
     setAdding(true);
     try {
@@ -138,7 +139,7 @@ function GroupSelect({ selected, onChange }) {
                 <Plus className="w-3.5 h-3.5" /> Add new group
               </button>
             ) : (
-              <form onSubmit={handleAddGroup} className="flex items-center gap-2">
+              <form onSubmit={handleAddGroup} onClick={e => e.stopPropagation()} className="flex items-center gap-2">
                 <input
                   autoFocus
                   className="input text-xs py-1.5 flex-1"
