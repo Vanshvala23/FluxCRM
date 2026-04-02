@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
 import { Group, GroupSchema } from './schemas/group-schema';
-import { ContactsModule } from 'src/contacts/contacts.module';
+import { ContactsModule } from '../contacts/contacts.module';
 
 @Module({
   imports: [
