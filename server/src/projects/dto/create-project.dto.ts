@@ -5,7 +5,31 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
-// ─── Create ──────────────────────────────────────────────────────────────────
+// ─── ENUMS (FIXED) ───────────────────────────────────────────────────────────
+
+export enum ProjectStatus {
+  PLANNING = 'planning',
+  ACTIVE = 'active',
+  ON_HOLD = 'on_hold',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
+
+export enum ProjectPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent',
+}
+
+export enum Currency {
+  INR = 'INR',
+  USD = 'USD',
+  EUR = 'EUR',
+  GBP = 'GBP',
+}
+
+// ─── CREATE DTO ──────────────────────────────────────────────────────────────
 
 export class CreateProjectDto {
   @ApiProperty({ example: 'FluxCRM Website Redesign' })
@@ -17,15 +41,15 @@ export class CreateProjectDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ enum: ['planning', 'active', 'on_hold', 'completed', 'cancelled'], default: 'planning' })
+  @ApiPropertyOptional({ enum: ProjectStatus, default: ProjectStatus.PLANNING })
   @IsOptional()
-  @IsEnum(['planning', 'active', 'on_hold', 'completed', 'cancelled'])
-  status?: string;
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
 
-  @ApiPropertyOptional({ enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' })
+  @ApiPropertyOptional({ enum: ProjectPriority, default: ProjectPriority.MEDIUM })
   @IsOptional()
-  @IsEnum(['low', 'medium', 'high', 'urgent'])
-  priority?: string;
+  @IsEnum(ProjectPriority)
+  priority?: ProjectPriority;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -37,6 +61,7 @@ export class CreateProjectDto {
   @IsMongoId()
   manager?: string;
 
+  // ✅ MULTIPLE MEMBERS SUPPORT
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
@@ -53,25 +78,29 @@ export class CreateProjectDto {
   @IsDateString()
   dueDate?: string;
 
+  // ✅ FIX: number transformation
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   budget?: number;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   spent?: number;
 
-  @ApiPropertyOptional({ default: 'INR' })
+  @ApiPropertyOptional({ enum: Currency, default: Currency.INR })
   @IsOptional()
-  @IsString()
-  currency?: string;
+  @IsEnum(Currency)
+  currency?: Currency;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
@@ -89,11 +118,11 @@ export class CreateProjectDto {
   notes?: string;
 }
 
-// ─── Update ──────────────────────────────────────────────────────────────────
+// ─── UPDATE DTO ──────────────────────────────────────────────────────────────
 
 export class UpdateProjectDto extends PartialType(CreateProjectDto) {}
 
-// ─── Query / Filter ──────────────────────────────────────────────────────────
+// ─── QUERY DTO ───────────────────────────────────────────────────────────────
 
 export class ProjectQueryDto {
   @ApiPropertyOptional()
@@ -101,15 +130,15 @@ export class ProjectQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ enum: ['planning', 'active', 'on_hold', 'completed', 'cancelled'] })
+  @ApiPropertyOptional({ enum: ProjectStatus })
   @IsOptional()
-  @IsEnum(['planning', 'active', 'on_hold', 'completed', 'cancelled'])
-  status?: string;
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
 
-  @ApiPropertyOptional({ enum: ['low', 'medium', 'high', 'urgent'] })
+  @ApiPropertyOptional({ enum: ProjectPriority })
   @IsOptional()
-  @IsEnum(['low', 'medium', 'high', 'urgent'])
-  priority?: string;
+  @IsEnum(ProjectPriority)
+  priority?: ProjectPriority;
 
   @ApiPropertyOptional()
   @IsOptional()
