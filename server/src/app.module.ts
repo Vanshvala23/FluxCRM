@@ -17,6 +17,7 @@ import { EstimationsModule } from './estimations/estimations.module';
 import { ItemsModule } from './items/items.module';
 import { BulkPdfModule } from './bulk-pdf/bulk-pdf.module';
 import { PaymentsModule } from './payments/payments.module';
+import { GroupModule } from './group/group.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PaymentsModule } from './payments/payments.module';
     ItemsModule,
     BulkPdfModule,
     PaymentsModule,
+    GroupModule,
   ],
   controllers: [AppController], 
   providers: [AppService],
