@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
 import { Group, GroupSchema } from './schemas/group-schema';
-import { ContactsModule } from '../contacts/contacts.module';
 
 @Module({
   imports: [
@@ -13,6 +12,6 @@ import { ContactsModule } from '../contacts/contacts.module';
   ],
   controllers: [GroupController],
   providers: [GroupService],
-  exports: [GroupService, MongooseModule,ContactsModule], // ✅ export so ContactsModule can use Group model
+  exports: [GroupService, MongooseModule],
 })
 export class GroupModule {}

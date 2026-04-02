@@ -3,19 +3,17 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ContactsService } from './contacts.service';
 import { ContactsController } from './contacts.controller';
 import { Contact, ContactSchema } from './schemas/contact.schema';
-import { Group, GroupSchema } from '../group/schemas/group-schema';
-import { GroupService } from '../group/group.service';
-import { GroupController } from '../group/group.controller';
+import { GroupModule } from '../group/group.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Contact.name, schema: ContactSchema },
-      { name: Group.name,   schema: GroupSchema   }, // ✅ register Group model
     ]),
+    GroupModule,
   ],
-  controllers: [ContactsController, GroupController],
-  providers:   [ContactsService,    GroupService],
-  exports:     [ContactsService, MongooseModule],
+  controllers: [ContactsController],
+  providers: [ContactsService],
+  exports: [ContactsService, MongooseModule],
 })
 export class ContactsModule {}
