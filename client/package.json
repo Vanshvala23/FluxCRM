@@ -13,8 +13,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@syncfusion/ej2-base": "^33.1.45",
-    "@syncfusion/ej2-react-kanban": "^33.1.44",
     "axios": "^1.13.6",
     "framer-motion": "^12.34.4",
     "lucide-react": "^0.576.0",
