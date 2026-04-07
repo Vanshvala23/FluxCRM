@@ -9,32 +9,35 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-    private recaptchaService:RecaptchaService,
+    private recaptchaService: RecaptchaService,
   ) {}
 
   async register(name: string, email: string, password: string, recaptchaToken: string) {
-    // ✅ Verify reCAPTCHA token before proceeding
-    await this.recaptchaService.verify(recaptchaToken, 'register');
-  const existing = await this.usersService.findByEmail(email);
-  if (existing) throw new ConflictException('Email already in use');
+    await this.recaptchaService.verify(recaptchaToken); // ✅ no action for v2
+    
+    const existing = await this.usersService.findByEmail(email);
+    if (existing) throw new ConflictException('Email already in use');
 
-  // ✅ Use createFromAuth instead of create to avoid DTO mismatch
-  const user = await this.usersService.createFromAuth(name, email, password);
-  const token = this.jwtService.sign({ sub: user._id, email: user.email, role: user.role });
-  return { 
-    access_token: token, 
-    user: { id: user._id, name: user.name, email: user.email, role: user.role } 
-  };
-}
+    const user = await this.usersService.createFromAuth(name, email, password);
+    const token = this.jwtService.sign({ sub: user._id, email: user.email, role: user.role });
+    return {
+      access_token: token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    };
+  }
 
   async login(email: string, password: string, recaptchaToken: string) {
-    // ✅ Verify reCAPTCHA token before proceeding
-    await this.recaptchaService.verify(recaptchaToken, 'login');
+    await this.recaptchaService.verify(recaptchaToken); // ✅ no action for v2
+
     const user = await this.usersService.findByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.password)))
       throw new UnauthorizedException('Invalid credentials');
+
     const token = this.jwtService.sign({ sub: user._id, email: user.email, role: user.role });
-    return { access_token: token, user: { id: user._id, name: user.name, email: user.email, role: user.role } };
+    return {
+      access_token: token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    };
   }
 
   async getProfile(userId: string) {

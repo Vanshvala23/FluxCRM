@@ -1,22 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-
-// ✅ Helper to safely get recaptcha token
-const getRecaptchaToken = (action) =>
-  new Promise((resolve, reject) => {
-    window.grecaptcha.ready(async () => {
-      try {
-        const token = await window.grecaptcha.execute(SITE_KEY, { action });
-        resolve(token);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
 
 export default function Login() {
   const { login } = useAuth();
@@ -25,18 +12,40 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
+
+  useEffect(() => {
+    // ✅ Render v2 checkbox widget once grecaptcha is ready
+    const interval = setInterval(() => {
+      if (window.grecaptcha && recaptchaRef.current && !recaptchaRef.current.hasChildNodes()) {
+        window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: SITE_KEY,
+          callback: (token) => setRecaptchaToken(token),       // ✅ user checked box
+          'expired-callback': () => setRecaptchaToken(''),     // ✅ token expired
+        });
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!recaptchaToken) {
+      setError('Please complete the reCAPTCHA');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      const recaptchaToken = await getRecaptchaToken('login');
       await login(form.email, form.password, recaptchaToken);
       navigate('/dashboard');
     } catch (err) {
-      // ✅ Show actual backend error if available
       setError(err?.response?.data?.message || 'Invalid email or password');
+      // ✅ Reset checkbox on failure
+      window.grecaptcha.reset();
+      setRecaptchaToken('');
     } finally {
       setLoading(false);
     }
@@ -77,19 +86,17 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading}
+
+            {/* ✅ v2 Checkbox renders here */}
+            <div ref={recaptchaRef} />
+
+            <button type="submit" disabled={loading || !recaptchaToken}
               className="btn-primary w-full flex items-center justify-center gap-2 py-2.5">
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-4">
-            Protected by reCAPTCHA —{' '}
-            <a href="https://policies.google.com/privacy" className="underline">Privacy</a> &{' '}
-            <a href="https://policies.google.com/terms" className="underline">Terms</a>
-          </p>
-
-          <p className="text-center text-sm text-gray-500 mt-3">
+          <p className="text-center text-sm text-gray-500 mt-6">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">Create one</Link>
           </p>
