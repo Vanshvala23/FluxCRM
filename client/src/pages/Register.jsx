@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
+const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -14,13 +16,18 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirm) { setError('Passwords do not match'); return; }
-    setError(''); setLoading(true);
+    setError('');
+    setLoading(true);
     try {
-      await register(form.name, form.email, form.password);
+      // ✅ Get reCAPTCHA token before calling register
+      const recaptchaToken = await window.grecaptcha.execute(SITE_KEY, { action: 'register' });
+      await register(form.name, form.email, form.password, recaptchaToken);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,7 +78,15 @@ export default function Register() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</> : 'Create account'}
             </button>
           </form>
-          <p className="text-center text-sm text-gray-500 mt-6">
+
+          {/* ✅ reCAPTCHA badge notice — required by Google's ToS */}
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Protected by reCAPTCHA —{' '}
+            <a href="https://policies.google.com/privacy" className="underline">Privacy</a> &{' '}
+            <a href="https://policies.google.com/terms" className="underline">Terms</a>
+          </p>
+
+          <p className="text-center text-sm text-gray-500 mt-3">
             Already have an account?{' '}
             <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">Sign in</Link>
           </p>

@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
+const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +18,9 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      // ✅ Get reCAPTCHA token before calling login
+      const recaptchaToken = await window.grecaptcha.execute(SITE_KEY, { action: 'login' });
+      await login(form.email, form.password, recaptchaToken);
       navigate('/dashboard');
     } catch {
       setError('Invalid email or password');
@@ -66,7 +70,14 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          {/* ✅ reCAPTCHA badge notice — required by Google's ToS */}
+          <p className="text-center text-xs text-gray-400 mt-4">
+            Protected by reCAPTCHA —{' '}
+            <a href="https://policies.google.com/privacy" className="underline">Privacy</a> &{' '}
+            <a href="https://policies.google.com/terms" className="underline">Terms</a>
+          </p>
+
+          <p className="text-center text-sm text-gray-500 mt-3">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">Create one</Link>
           </p>
