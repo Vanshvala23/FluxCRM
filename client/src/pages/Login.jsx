@@ -5,6 +5,19 @@ import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
+// ✅ Helper to safely get recaptcha token
+const getRecaptchaToken = (action) =>
+  new Promise((resolve, reject) => {
+    window.grecaptcha.ready(async () => {
+      try {
+        const token = await window.grecaptcha.execute(SITE_KEY, { action });
+        resolve(token);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -18,12 +31,12 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      // ✅ Get reCAPTCHA token before calling login
-      const recaptchaToken = await window.grecaptcha.execute(SITE_KEY, { action: 'login' });
+      const recaptchaToken = await getRecaptchaToken('login');
       await login(form.email, form.password, recaptchaToken);
       navigate('/dashboard');
-    } catch {
-      setError('Invalid email or password');
+    } catch (err) {
+      // ✅ Show actual backend error if available
+      setError(err?.response?.data?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -70,7 +83,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* ✅ reCAPTCHA badge notice — required by Google's ToS */}
           <p className="text-center text-xs text-gray-400 mt-4">
             Protected by reCAPTCHA —{' '}
             <a href="https://policies.google.com/privacy" className="underline">Privacy</a> &{' '}

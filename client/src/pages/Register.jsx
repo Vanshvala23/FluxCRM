@@ -5,6 +5,19 @@ import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
+// ✅ Same helper as Login.jsx
+const getRecaptchaToken = (action) =>
+  new Promise((resolve, reject) => {
+    window.grecaptcha.ready(async () => {
+      try {
+        const token = await window.grecaptcha.execute(SITE_KEY, { action });
+        resolve(token);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -19,12 +32,11 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      // ✅ Get reCAPTCHA token before calling register
-      const recaptchaToken = await window.grecaptcha.execute(SITE_KEY, { action: 'register' });
+      const recaptchaToken = await getRecaptchaToken('register');
       await register(form.name, form.email, form.password, recaptchaToken);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err?.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -79,7 +91,6 @@ export default function Register() {
             </button>
           </form>
 
-          {/* ✅ reCAPTCHA badge notice — required by Google's ToS */}
           <p className="text-center text-xs text-gray-400 mt-4">
             Protected by reCAPTCHA —{' '}
             <a href="https://policies.google.com/privacy" className="underline">Privacy</a> &{' '}
