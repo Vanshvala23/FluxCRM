@@ -13,15 +13,17 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  // ✅ Added recaptchaToken parameter
+  const login = async (email, password, recaptchaToken) => {
+    const { data } = await api.post('/auth/login', { email, password, recaptchaToken });
     localStorage.setItem('flux_token', data.access_token);
     localStorage.setItem('flux_user', JSON.stringify(data.user));
     setUser(data.user);
   };
 
-  const register = async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password });
+  // ✅ Added recaptchaToken parameter
+  const register = async (name, email, password, recaptchaToken) => {
+    const { data } = await api.post('/auth/register', { name, email, password, recaptchaToken });
     localStorage.setItem('flux_token', data.access_token);
     localStorage.setItem('flux_user', JSON.stringify(data.user));
     setUser(data.user);
