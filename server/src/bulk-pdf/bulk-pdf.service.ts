@@ -200,17 +200,36 @@ export class BulkPdfService {
   }
 
   // ✅ Always explicitly select data field for download
-  async download(id: string): Promise<BulkPdfDocument> {
-    const pdf = await this.bulkPdfModel
-      .findById(id)
-      .select('+data +originalName +mimeType')
-      .exec();
+  // bulk-pdf.service.ts
+async download(id: string): Promise<{ buffer: Buffer; originalName: string }> {
+  const doc = await this.bulkPdfModel
+    .findById(id)
+    .select('+data +originalName')
+    .exec();
 
-    if (!pdf) throw new NotFoundException('PDF not found');
-    if (!pdf.data) throw new NotFoundException('PDF data is missing or corrupted');
+  if (!doc) throw new NotFoundException('PDF not found');
 
-    return pdf;
+  const raw = (doc as any).data;
+
+  let buffer: Buffer;
+
+  if (Buffer.isBuffer(raw)) {
+    buffer = raw;
+  } else if (raw?.value instanceof Function) {
+    buffer = Buffer.from(raw.value()); // ✅ BSON Binary .value() is the cleanest way
+  } else if (raw?.buffer) {
+    buffer = Buffer.from(raw.buffer, raw.position ?? 0, raw.length);
+  } else {
+    buffer = Buffer.from(raw);
   }
+
+  // ✅ Safety check
+  if (buffer.slice(0, 4).toString() !== '%PDF') {
+    throw new BadRequestException('Stored data is not a valid PDF');
+  }
+
+  return { buffer, originalName: doc.originalName };
+}
 
   async remove(id: string) {
     const res = await this.bulkPdfModel.findByIdAndDelete(id);

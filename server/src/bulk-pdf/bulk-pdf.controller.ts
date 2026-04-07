@@ -22,26 +22,16 @@ export class BulkPdfController {
     return this.bulkPdfService.exportAndStore(dto);
   }
 
-  @Get(':id/download')
-  async download(@Param('id') id: string, @Res() res: Response) {
-    const pdf = await this.bulkPdfService.download(id);
+  // bulk-pdf.controller.ts
+@Get(':id/download')
+async download(@Param('id') id: string, @Res() res: Response) {
+  const { buffer, originalName } = await this.bulkPdfService.download(id);
 
-    // ✅ Single reliable conversion — handles Buffer, BSON Binary, Uint8Array
-    const buffer = Buffer.from(pdf.data as any);
-
-    if (!buffer.length) {
-      throw new NotFoundException('PDF data is empty');
-    }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${pdf.originalName}"`,
-    );
-    res.setHeader('Content-Length', buffer.length);
-    res.end(buffer);
-  }
-
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${originalName}"`);
+  res.setHeader('Content-Length', buffer.length);
+  res.end(buffer);
+}
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files', 20, { storage: memoryStorage() }))
   upload(
