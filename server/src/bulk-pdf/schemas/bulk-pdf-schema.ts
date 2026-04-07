@@ -14,7 +14,6 @@ export class BulkPdf {
   @Prop({ required: true })
   size!: number;
 
-  // ✅ Explicit Buffer type — avoids BSON Binary wrapping issues on retrieval
   @Prop({ type: Buffer, required: true })
   data!: Buffer;
 
