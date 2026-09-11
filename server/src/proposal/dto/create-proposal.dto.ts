@@ -16,7 +16,7 @@ import { ItemLineDto } from '../../items/dto/create-item.dto';
 
 export class ProposalItemDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsOptional()
   @IsString()
@@ -24,24 +24,24 @@ export class ProposalItemDto {
 
   @IsNumber()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 
   @IsNumber()
   @Min(0)
-  unitPrice: number;
+  unitPrice!: number;
 }
 
 export class CreateProposalDto {
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
   @IsMongoId()
-  contact: string;
+  contact!: string;
 
   @IsOptional()
   @IsMongoId()
